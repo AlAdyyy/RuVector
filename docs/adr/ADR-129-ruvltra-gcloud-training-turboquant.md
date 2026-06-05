@@ -362,7 +362,7 @@ If fine-tuning degrades model quality (any release gate fails after publishing):
    ```bash
    # Revert to previous version
    git -C /path/to/hf-clone revert HEAD
-   huggingface-cli upload ruv/ruvltra-medium . --commit-message "Rollback: v2.0-tq regressed on G3"
+   hf upload ruv/ruvltra-medium . --commit-message "Rollback: v2.0-tq regressed on G3"
    ```
 
 2. **Model versioning**: All GGUF files are tagged with `v1.0` (current) and `v2.0-tq` (new). Both versions remain downloadable. The `latest` tag only moves to `v2.0-tq` after all gates pass. Users pinning `v1.0` are unaffected.
