@@ -237,17 +237,17 @@ impl ModelUploader {
         self.upload_via_cli(model_path, repo_id, metadata)
     }
 
-    /// Upload using huggingface-cli (requires huggingface-cli to be installed)
+    /// Upload using hf CLI (requires hf to be installed)
     fn upload_via_cli(
         &self,
         model_path: &Path,
         repo_id: &str,
         metadata: Option<ModelMetadata>,
     ) -> Result<String> {
-        // Check if huggingface-cli is available
+        // Check if hf CLI is available
         if !self.has_hf_cli() {
             return Err(HubError::Config(
-                "huggingface-cli not found. Install with: pip install huggingface_hub[cli]"
+                "hf CLI not found. Install with: curl -LsSf https://hf.co/cli/install.sh | bash"
                     .to_string(),
             ));
         }
@@ -271,19 +271,19 @@ impl ModelUploader {
         Ok(format!("https://huggingface.co/{}", repo_id))
     }
 
-    /// Check if huggingface-cli is available
+    /// Check if hf CLI is available
     fn has_hf_cli(&self) -> bool {
-        std::process::Command::new("huggingface-cli")
-            .arg("--version")
+        std::process::Command::new("hf")
+            .arg("version")
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
     }
 
-    /// Create repository using huggingface-cli
+    /// Create repository using hf CLI
     fn create_repo_cli(&self, repo_id: &str) -> Result<()> {
         let mut args = vec![
-            "repo".to_string(),
+            "repos".to_string(),
             "create".to_string(),
             repo_id.to_string(),
         ];
@@ -292,7 +292,7 @@ impl ModelUploader {
             args.push("--private".to_string());
         }
 
-        let status = std::process::Command::new("huggingface-cli")
+        let status = std::process::Command::new("hf")
             .args(&args)
             .env("HF_TOKEN", &self.config.hf_token)
             .status()
@@ -306,17 +306,23 @@ impl ModelUploader {
         Ok(())
     }
 
-    /// Upload file using huggingface-cli
+    /// Upload file using hf CLI
     fn upload_file_cli(&self, file_path: &Path, repo_id: &str) -> Result<()> {
+        let filename = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("README.md");
+
         let args = vec![
             "upload".to_string(),
             repo_id.to_string(),
             file_path.to_str().unwrap().to_string(),
+            filename.to_string(),
             "--commit-message".to_string(),
             self.config.commit_message.clone(),
         ];
 
-        let status = std::process::Command::new("huggingface-cli")
+        let status = std::process::Command::new("hf")
             .args(&args)
             .env("HF_TOKEN", &self.config.hf_token)
             .status()
