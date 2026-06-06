@@ -49,19 +49,7 @@ jobs:
         # workspace-wide anyway (it's the lock that defines the dep
         # tree, not the cluster crate's manifest).
         run: |
-          cargo audit --deny warnings \
-              --ignore RUSTSEC-2024-0436 `# paste — unmaintained, transitive via candle` \
-              --ignore RUSTSEC-2025-0134 `# rustls-pemfile — transitive via tonic-tls` \
-              --ignore RUSTSEC-2025-0141 `# bincode 1.x — workspace-wide pin via rkyv etc.` \
-              --ignore RUSTSEC-2026-0115 `# imageproc 0.25 — unsound, transitive via ruvector-scipix; outside hailo scope` \
-              --ignore RUSTSEC-2026-0116 `# imageproc 0.25 — unsound, transitive via ruvector-scipix; outside hailo scope` \
-              --ignore RUSTSEC-2026-0117  \n              --ignore RUSTSEC-2026-0163  \n              --ignore RUSTSEC-2026-0162  \n              --ignore RUSTSEC-2026-0122  `# imageproc 0.25 — unsound, transitive via ruvector-scipix; outside hailo scope`
-              --ignore RUSTSEC-2026-0163 `# pqcrypto-internals — unmaintained` \
-              --ignore RUSTSEC-2026-0162 `# pqcrypto-traits — unmaintained` \
-              --ignore RUSTSEC-2026-0122 `# rkyv 0.8.15 — unsound`
-              --ignore RUSTSEC-2026-0163 `# pqcrypto-internals — unmaintained` \
-              --ignore RUSTSEC-2026-0162 `# pqcrypto-traits — unmaintained` \
-              --ignore RUSTSEC-2026-0122 `# rkyv 0.8.15 — unsound`
+          cargo audit --deny warnings               --ignore RUSTSEC-2024-0436                --ignore RUSTSEC-2025-0134                --ignore RUSTSEC-2025-0141                --ignore RUSTSEC-2026-0115                --ignore RUSTSEC-2026-0116                --ignore RUSTSEC-2026-0117                --ignore RUSTSEC-2026-0163                --ignore RUSTSEC-2026-0162                --ignore RUSTSEC-2026-0122
 
   deny:
     name: cargo-deny (license + bans + sources)
