@@ -1,3 +1,4 @@
+#![allow(clippy::derivable_impls)]
 use crate::attention::{
     AttentionBackend, AttentionError, SparseAttentionConfig, SubquadraticSparseAttention,
 };

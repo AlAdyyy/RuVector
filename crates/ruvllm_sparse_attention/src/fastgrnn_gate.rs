@@ -1,3 +1,8 @@
+#![allow(
+    clippy::needless_range_loop,
+    clippy::redundant_closure,
+    clippy::iter_cloned_collect
+)]
 //! FastGRNN salience gate for near-linear attention.
 //!
 //! A FastGRNN cell is run as a recurrent O(N · D_h²) pass over the token
