@@ -231,11 +231,16 @@ members = [
     "crates/ruvllm_sparse_attention",
     # Generic retrieval LM + masked discrete diffusion built on the kernel
     "crates/ruvllm_retrieval_diffusion",
+    # RAIRS IVF: Redundant Assignment + Amplified Inverse Residual (ADR-193)
+    "crates/ruvector-rairs",
 ]
 resolver = "2"
 
+[workspace.lints.clippy]
+unused_unit = "allow"
+
 [workspace.package]
-version = "2.2.2"
+version = "2.2.3"
 edition = "2021"
 rust-version = "1.77"
 license = "MIT"

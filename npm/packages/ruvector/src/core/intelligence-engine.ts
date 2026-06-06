@@ -272,23 +272,12 @@ export class IntelligenceEngine {
   // =========================================================================
 
   /**
-   * Generate embedding using ONNX, attention, or hash (in order of preference)
+   * Generate embedding using attention or hash (sync). Use embedAsync() for ONNX.
    */
   embed(text: string): number[] {
     const dim = this.config.embeddingDim;
 
-    // Try ONNX semantic embeddings first (best quality)
-    if (this.onnxReady && this.onnxEmbedder) {
-      try {
-        // Note: This is sync wrapper for async ONNX
-        // For full async, use embedAsync
-        return this.hashEmbed(text, dim); // Fallback for sync context
-      } catch {
-        // Fall through
-      }
-    }
-
-    // Try to use attention-based embedding
+    // Try to use attention-based embedding (best sync quality)
     if (this.attention?.DotProductAttention) {
       try {
         return this.attentionEmbed(text, dim);
@@ -1075,10 +1064,17 @@ export class IntelligenceEngine {
       this.agentMappings.clear();
     }
 
-    // Import memories
+    // Import memories and rebuild HNSW index so recall() returns results (#315)
     if (data.memories) {
       for (const mem of data.memories) {
         this.memories.set(mem.id, mem);
+        if (this.vectorDb && mem.embedding?.length) {
+          this.vectorDb.insert({
+            id: mem.id,
+            vector: new Float32Array(mem.embedding),
+            metadata: JSON.stringify({ content: mem.content, type: mem.type, created: mem.created }),
+          }).catch(() => {});
+        }
       }
     }
 
