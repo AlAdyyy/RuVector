@@ -1,9 +1,4 @@
-#![allow(
-    clippy::needless_range_loop,
-    clippy::if_same_then_else,
-    clippy::manual_clamp,
-    clippy::derivable_impls
-)]
+#![allow(clippy::needless_range_loop, clippy::if_same_then_else, clippy::manual_clamp, clippy::derivable_impls)]
 #[cfg(not(feature = "std"))]
 use crate::no_std_math::F32Ext as _;
 use crate::tensor::Tensor3;

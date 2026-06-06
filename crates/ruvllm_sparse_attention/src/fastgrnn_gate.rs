@@ -1,30 +1,4 @@
-#![allow(
-    clippy::needless_range_loop,
-    clippy::redundant_closure,
-    clippy::iter_cloned_collect
-)]
-//! FastGRNN salience gate for near-linear attention.
-//!
-//! A FastGRNN cell is run as a recurrent O(N · D_h²) pass over the token
-//! sequence, producing a per-position salience score. The score is
-//! intended to feed `SubquadraticSparseAttention::forward_gated`, which
-//! drops below-threshold tokens from the attention candidate set.
-//!
-//! Combined cost:
-//!   FastGRNN forward         : O(N · (D_in · D_h + D_h²))
-//!   Sparse attention (gated) : O(N · (W + K_keep + B))
-//!   Total                    : O(N) for fixed D_h, W, K_keep, B.
-//!
-//! Cell math (matches cognitum-agent's `sparse_fastgrnn.rs`):
-//!   g  = σ(W_g · x + U_g · h + b_g)
-//!   c  = tanh(W_u · x + U_u · h + b_u)
-//!   gf = clamp(ζ·g + ν, 0, 1)
-//!   h' = gf ⊙ h + (1 − gf) ⊙ c
-//!
-//! Salience at position i is L2(h_i). EMA baseline tracking is left
-//! to the caller (this crate is stateless w.r.t. session-level
-//! anomaly baselines — it just produces salience).
-
+#![allow(clippy::needless_range_loop, clippy::redundant_closure, clippy::iter_cloned_collect)]
 #[cfg(not(feature = "std"))]
 use crate::no_std_math::F32Ext as _;
 use crate::tensor::Tensor3;
@@ -74,7 +48,7 @@ impl FastGrnnGate {
         Self {
             input_dim,
             hidden_dim,
-            w_gate: (0..n_in_h).map(|i| seed_w(i)).collect(),
+            w_gate: (0..n_in_h).map(seed_w).collect(),
             u_gate: (0..n_h_h).map(|i| seed_w(i + 1000)).collect(),
             w_update: (0..n_in_h).map(|i| seed_w(i + 2000)).collect(),
             u_update: (0..n_h_h).map(|i| seed_w(i + 3000)).collect(),
@@ -194,7 +168,7 @@ impl FastGrnnGate {
             return Vec::new();
         }
         let q = quantile.clamp(0.0, 1.0);
-        let mut sorted: Vec<f32> = salience.iter().copied().collect();
+        let mut sorted: Vec<f32> = salience.to_vec();
         // partial_cmp can return None for NaN — sort treating NaN as smallest.
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
         let idx = ((n as f32) * q) as usize;

@@ -1,37 +1,4 @@
 #![allow(clippy::needless_range_loop, clippy::needless_lifetimes)]
-//! Corpus-agnostic training-free retrieval LM and masked discrete diffusion
-//! built on `ruvllm_sparse_attention`.
-//!
-//! Generalises the `sparse-mario` example: any small-vocab token domain can
-//! plug in by supplying a corpus and a [`RetrievalConfig`]. The kernel is
-//! used as an associative memory — no autograd, no learned weights, no
-//! Python toolchain.
-//!
-//! Two pipelines from one kernel:
-//!
-//! - [`Retriever::generate_fast`] — autoregressive next-token retrieval via
-//!   `KvCache` + `decode_step`, O(log T) per generated token.
-//! - [`Diffuser::diffuse`] — bidirectional masked discrete diffusion with a
-//!   MaskGIT cosine schedule. Beats the AR path on aggregate by 6.9× on
-//!   the Mario benchmark (see `sparse-mario` baselines doc).
-//!
-//! ## Domain plug-in checklist
-//!
-//! ```ignore
-//! use ruvllm_retrieval_diffusion::{Retriever, Diffuser, RetrievalConfig, SamplingConfig};
-//!
-//! let cfg = RetrievalConfig {
-//!     vocab_size: 5,        // your domain's token count
-//!     head_dim: 64,         // 64 works well for vocab ≤ 32
-//!     pos_scale: 0.5,       // try 0 to make AR pos-invariant
-//!     mask_sentinel: 255,
-//!     ..RetrievalConfig::default()
-//! };
-//! let corpus: Vec<u8> = encode_my_corpus();   // your encoder, vocab-bounded
-//! let retriever = Retriever::new(corpus, cfg, 0xMARI_BEEF);
-//! let level = retriever.generate_fast(&seed, 256, &SamplingConfig::quality(), 0xC0FFEE);
-//! ```
-
 use ruvllm_sparse_attention::{
     AttentionBackend, KvCache, SparseAttentionConfig, SubquadraticSparseAttention, Tensor3,
 };

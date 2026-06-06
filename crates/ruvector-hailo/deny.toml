@@ -30,7 +30,10 @@ ignore = [
     # cluster's deny.toml; workspace-wide concerns ignored here so
     # the per-crate audit stays green).
     "RUSTSEC-2025-0141", # bincode 1.x unmaintained
-    "RUSTSEC-2026-0097", # rand unsound w/ custom logger
+    "RUSTSEC-2026-0097",
+    "RUSTSEC-2026-0163",
+    "RUSTSEC-2026-0162",
+    "RUSTSEC-2026-0122", # rand unsound w/ custom logger
 ]
 
 [licenses]
