@@ -111,7 +111,7 @@ fn main() {
     println!();
 
     let cfg = drum_config();
-    let retriever = Retriever::new(corpus.clone(), cfg, 0xD7_5_BABE);
+    let retriever = Retriever::new(corpus.clone(), cfg, 0x0D75_BABE);
 
     // Seed with the first half of a familiar pattern, ask the model to
     // continue. AR walks bigram statistics; should mostly stay in groove.
@@ -121,9 +121,17 @@ fn main() {
     println!();
     println!("--- AR (KvCache + decode_step) ---");
     let t0 = std::time::Instant::now();
-    let ar = retriever.generate_fast(&seed, 64, &sampling, 0xC0_FFEE_42);
+    let ar = retriever.generate_fast(&seed, 64, &sampling, 0xC0FF_EE42);
     let dt_ar = t0.elapsed();
-    println!("seed         : \"{}\"", String::from_utf8_lossy(&seed.iter().map(|&t| decode_token(t) as u8).collect::<Vec<_>>()));
+    println!(
+        "seed         : \"{}\"",
+        String::from_utf8_lossy(
+            &seed
+                .iter()
+                .map(|&t| decode_token(t) as u8)
+                .collect::<Vec<_>>()
+        )
+    );
     println!("generated    : {} tokens in {:.2?}", 64, dt_ar);
     println!();
     println!("{}", render_bars(&ar, 16));
@@ -133,7 +141,7 @@ fn main() {
     println!("--- Diffusion (D3PM-style, cosine schedule) ---");
     let diffuser = Diffuser::new(&retriever);
     let t0 = std::time::Instant::now();
-    let diff = diffuser.diffuse(64, 24, &sampling, 0xD1_FF_BEEF);
+    let diff = diffuser.diffuse(64, 24, &sampling, 0xD1FF_BEEF);
     let dt_diff = t0.elapsed();
     println!(
         "diffused     : {} tokens × 24 denoising steps in {:.2?}",

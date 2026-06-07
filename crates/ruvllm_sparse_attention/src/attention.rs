@@ -1,3 +1,4 @@
+#![allow(clippy::needless_range_loop, clippy::if_same_then_else, clippy::manual_clamp, clippy::derivable_impls)]
 #[cfg(not(feature = "std"))]
 use crate::no_std_math::F32Ext as _;
 use crate::tensor::Tensor3;
@@ -1576,21 +1577,13 @@ impl SubquadraticSparseAttention {
             } else {
                 kv_start.saturating_sub(window)
             };
-            let q_hi = if causal {
-                (kv_end - 1 + window + 1).min(seq) // exclusive upper bound on q
-            } else {
-                (kv_end - 1 + window + 1).min(seq)
-            };
+            let q_hi = (kv_end - 1 + window + 1).min(seq);
 
             for h in 0..q_heads {
                 let kv_h = h / group_size;
                 for qi in q_lo..q_hi {
                     // Window intersection of query qi with this tile:
-                    let win_lo = if causal {
-                        qi.saturating_sub(window).max(kv_start)
-                    } else {
-                        qi.saturating_sub(window).max(kv_start)
-                    };
+                    let win_lo = qi.saturating_sub(window).max(kv_start);
                     let win_hi = if causal {
                         qi.min(kv_end.saturating_sub(1))
                     } else {
