@@ -18,7 +18,7 @@ export function createChannelsCommand(): Command {
     .alias('ls')
     .description('List available channel integrations')
     .option('--json', 'Output as JSON')
-    .action((options: { json?: boolean }) => {
+    .action((options) => {
       const channelList = [
         {
           name: 'slack',
@@ -69,7 +69,7 @@ export function createChannelsCommand(): Command {
   channels
     .command('setup <channel>')
     .description('Show setup instructions for a channel')
-    .action((channel: string) => {
+    .action((channel) => {
       const normalizedChannel = channel.toLowerCase();
 
       switch (normalizedChannel) {
@@ -97,7 +97,7 @@ export function createChannelsCommand(): Command {
   channels
     .command('test <channel>')
     .description('Test channel connection')
-    .action((channel: string) => {
+    .action(async (channel) => {
       const normalizedChannel = channel.toLowerCase();
       console.log(chalk.cyan(`\nTesting ${normalizedChannel} connection...`));
 
@@ -374,12 +374,12 @@ export function createWebhooksCommand(): Command {
     .command('test <url>')
     .description('Test a webhook endpoint')
     .option('--payload <json>', 'Custom JSON payload')
-    .action(async (url: string, options: { payload?: string }) => {
+    .action(async (url, options) => {
       console.log(chalk.cyan(`\nTesting webhook: ${url}\n`));
 
       try {
         const payload = options.payload
-          ? JSON.parse(options.payload) as Record<string, unknown>
+          ? JSON.parse(options.payload)
           : { test: true, timestamp: new Date().toISOString() };
 
         const response = await fetch(url, {

@@ -543,7 +543,7 @@ export class CognitumGate {
       }
     };
 
-    void (async () => {
+    (async () => {
       for await (const request of requests) {
         if (this.isDestroyed) break;
 
@@ -553,7 +553,7 @@ export class CognitumGate {
 
         const promise = processRequest(request).then(() => {
           const index = pending.indexOf(promise);
-          if (index !== -1) { void pending.splice(index, 1); }
+          if (index !== -1) pending.splice(index, 1);
         });
         pending.push(promise);
       }
@@ -633,7 +633,7 @@ export class CognitumGate {
   /**
    * Destroy the gate and release resources
    */
-  destroy(): Promise<void> {
+  async destroy(): Promise<void> {
     this.isDestroyed = true;
 
     for (const tile of this.tiles) {
@@ -644,14 +644,13 @@ export class CognitumGate {
     this.tiles = [];
     this.pendingRequests.clear();
     this.eventHandlers.clear();
-    return Promise.resolve();
   }
 
   // ==========================================================================
   // Private Methods
   // ==========================================================================
 
-  private initializeTiles(): Promise<void> {
+  private async initializeTiles(): Promise<void> {
     const { tileCount, tileMemory } = this.config;
 
     for (let i = 0; i < tileCount; i++) {
@@ -673,7 +672,6 @@ export class CognitumGate {
     }
 
     this.stats.activeTiles = this.tiles.length;
-    return Promise.resolve();
   }
 
   private detectRuntime(): RuntimeHint {
@@ -901,16 +899,15 @@ export class CognitumGate {
 class InMemoryReceiptStore implements ReceiptStore {
   private receipts: Map<string, WitnessReceipt> = new Map();
 
-  store(receipt: WitnessReceipt): Promise<void> {
+  async store(receipt: WitnessReceipt): Promise<void> {
     this.receipts.set(receipt.token, receipt);
-    return Promise.resolve();
   }
 
-  get(token: string): Promise<WitnessReceipt | null> {
-    return Promise.resolve(this.receipts.get(token) ?? null);
+  async get(token: string): Promise<WitnessReceipt | null> {
+    return this.receipts.get(token) || null;
   }
 
-  query(filter: ReceiptFilter): Promise<WitnessReceipt[]> {
+  async query(filter: ReceiptFilter): Promise<WitnessReceipt[]> {
     let results = Array.from(this.receipts.values());
 
     if (filter.agentId) {
@@ -932,7 +929,7 @@ class InMemoryReceiptStore implements ReceiptStore {
       results = results.slice(0, filter.limit);
     }
 
-    return Promise.resolve(results);
+    return results;
   }
 }
 
@@ -998,7 +995,7 @@ export class IndexedDBReceiptStore implements ReceiptStore {
       const request = store.get(token);
 
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve((request.result as WitnessReceipt | undefined) ?? null);
+      request.onsuccess = () => resolve(request.result || null);
     });
   }
 

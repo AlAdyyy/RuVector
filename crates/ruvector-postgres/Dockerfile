@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for ruvector-postgres extension
 # Builds the extension and creates a PostgreSQL image with it installed
-# v2.0.1: Extension version aligned with Docker image tag (fixes #271)
+# v0.3.1: Fixes — Cypher self-reference, graph/RDF persistence, SONA dimension panic
 
 # Build stage
 # Using nightly Rust to support edition2024 crates in the registry

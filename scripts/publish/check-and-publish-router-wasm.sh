@@ -4,9 +4,6 @@
 
 set -e
 
-# Resolve repo root from script location (issue #359: don't hardcode paths).
-REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-
 echo "Checking router-core v0.1.1 availability..."
 if cargo search router-core 2>&1 | grep -q "router-core.*0\.1\.1"; then
     echo "✓ router-core v0.1.1 is available!"
@@ -15,13 +12,13 @@ if cargo search router-core 2>&1 | grep -q "router-core.*0\.1\.1"; then
     echo ""
 
     # Load API key
-    export $(grep "^CRATES_API_KEY=" "$REPO_ROOT"/.env | xargs)
+    export $(grep "^CRATES_API_KEY=" /workspaces/ruvector/.env | xargs)
 
     # Login
     cargo login "$CRATES_API_KEY"
 
     # Publish
-    cd "$REPO_ROOT"/crates/router-wasm
+    cd /workspaces/ruvector/crates/router-wasm
     cargo publish --allow-dirty
 
     echo ""

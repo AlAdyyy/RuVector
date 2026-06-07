@@ -13,6 +13,8 @@ import type {
   QuantumState,
   HyperbolicPoint,
   TopologicalFeature,
+  ExoticResult,
+  ResourceUsage,
   ExoticConfig,
 } from './types';
 
@@ -429,7 +431,7 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
     ...config,
   };
 
-  const stats: ExoticStats = {
+  let stats: ExoticStats = {
     quantumOperations: 0,
     hyperbolicOperations: 0,
     topologicalOperations: 0,
@@ -450,7 +452,7 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
         entanglementMap: new Map(),
       };
     },
-    quantumHadamard: (state, _qubit) => {
+    quantumHadamard: (state, qubit) => {
       stats.quantumOperations++;
       // WASM call: ruvector_quantum_hadamard(state, qubit)
       return { ...state };
@@ -462,12 +464,12 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
       newMap.set(control, [...(newMap.get(control) || []), target]);
       return { ...state, entanglementMap: newMap };
     },
-    quantumPhase: (state, _qubit, _phase) => {
+    quantumPhase: (state, qubit, phase) => {
       stats.quantumOperations++;
       // WASM call: ruvector_quantum_phase(state, qubit, phase)
       return { ...state };
     },
-    quantumMeasure: (state, _qubits) => {
+    quantumMeasure: (state, qubits) => {
       stats.quantumOperations++;
       // WASM call: ruvector_quantum_measure(state, qubits)
       return {
@@ -476,12 +478,12 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
         collapsedState: state,
       };
     },
-    quantumAmplify: (state, _oracle, iterations = 1) => {
+    quantumAmplify: (state, oracle, iterations = 1) => {
       stats.quantumOperations += iterations;
       // WASM call: ruvector_quantum_amplify(state, oracle, iterations)
       return { ...state };
     },
-    quantumVqe: (_hamiltonian, _ansatz, _optimizer = 'cobyla') => {
+    quantumVqe: (hamiltonian, ansatz, optimizer = 'cobyla') => {
       stats.quantumOperations++;
       // WASM call: ruvector_quantum_vqe(hamiltonian, ansatz, optimizer)
       return {
@@ -493,21 +495,21 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
     },
 
     // Hyperbolic operations
-    hyperbolicPoint: (_coordinates, _manifold = 'poincare', _curvature = -1) => {
+    hyperbolicPoint: (coordinates, manifold = 'poincare', curvature = -1) => {
       stats.hyperbolicOperations++;
-      return { coordinates: _coordinates, curvature: _curvature, manifold: _manifold };
+      return { coordinates, curvature, manifold };
     },
-    hyperbolicDistance: (_p1, _p2) => {
+    hyperbolicDistance: (p1, p2) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_hyperbolic_distance(p1, p2)
       return 0;
     },
-    mobiusAdd: (x, _y, _c = 1) => {
+    mobiusAdd: (x, y, c = 1) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_mobius_add(x, y, c)
       return x;
     },
-    mobiusMatvec: (_M, x, _c = 1) => {
+    mobiusMatvec: (M, x, c = 1) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_mobius_matvec(M, x, c)
       return x;
@@ -521,36 +523,32 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
         manifold: base?.manifold ?? 'poincare',
       };
     },
-    hyperbolicLog: (y, _base) => {
+    hyperbolicLog: (y, base) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_hyperbolic_log(y, base)
       return y.coordinates;
     },
-    hyperbolicTransport: (v, _from, _to) => {
+    hyperbolicTransport: (v, from, to) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_hyperbolic_transport(v, from, to)
       return v;
     },
-    hyperbolicCentroid: (points, _weights) => {
+    hyperbolicCentroid: (points, weights) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_hyperbolic_centroid(points, weights)
-      const first = points[0];
-      if (first === undefined) {
-        return { coordinates: new Float32Array(0), curvature: -1, manifold: 'poincare' };
-      }
-      return first;
+      return points[0];
     },
 
     // Topological operations
-    persistentHomology: (_data, _maxDimension = 2, _threshold = Infinity) => {
+    persistentHomology: (data, maxDimension = 2, threshold = Infinity) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_persistent_homology(data, maxDimension, threshold)
-      return [] as TopologicalFeature[];
+      return [];
     },
-    bettiNumbers: (features, _threshold = 0) => {
+    bettiNumbers: (features, threshold = 0) => {
       stats.topologicalOperations++;
       const maxDim = features.reduce((max, f) => Math.max(max, f.dimension), 0);
-      return new Array<number>(maxDim + 1).fill(0);
+      return new Array(maxDim + 1).fill(0);
     },
     persistenceDiagram: (features) => {
       stats.topologicalOperations++;
@@ -560,39 +558,39 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
         dimension: f.dimension,
       }));
     },
-    bottleneckDistance: (_diagram1, _diagram2) => {
+    bottleneckDistance: (diagram1, diagram2) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_bottleneck_distance(diagram1, diagram2)
       return 0;
     },
-    wassersteinDistance: (_diagram1, _diagram2, _p = 2) => {
+    wassersteinDistance: (diagram1, diagram2, p = 2) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_wasserstein_distance(diagram1, diagram2, p)
       return 0;
     },
-    mapper: (_data, _lens, _numBins = 10, _overlap = 0.5) => {
+    mapper: (data, lens, numBins = 10, overlap = 0.5) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_mapper(data, lens, numBins, overlap)
       return { nodes: [], edges: [] };
     },
 
     // Fractal operations
-    fractalDimension: (_data) => {
+    fractalDimension: (data) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_fractal_dimension(data)
       return 0;
     },
-    fractalEmbedding: (_c, resolution = 256, _maxIterations = 100) => {
+    fractalEmbedding: (c, resolution = 256, maxIterations = 100) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_fractal_embedding(c, resolution, maxIterations)
       return new Float32Array(resolution * resolution);
     },
-    lyapunovExponents: (_trajectory, embeddingDim = 3, _delay = 1) => {
+    lyapunovExponents: (trajectory, embeddingDim = 3, delay = 1) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_lyapunov_exponents(trajectory, embeddingDim, delay)
       return new Float32Array(embeddingDim);
     },
-    recurrencePlot: (trajectory, _threshold = 0.1) => {
+    recurrencePlot: (trajectory, threshold = 0.1) => {
       stats.topologicalOperations++;
       // WASM call: ruvector_recurrence_plot(trajectory, threshold)
       const size = trajectory.length;
@@ -600,17 +598,17 @@ export function createExoticEngine(config?: ExoticConfig): ExoticEngine {
     },
 
     // Non-Euclidean neural
-    hyperbolicLayer: (input, _weights, _bias) => {
+    hyperbolicLayer: (input, weights, bias) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_hyperbolic_layer(input, weights, bias)
       return input;
     },
-    sphericalLayer: (input, _weights) => {
+    sphericalLayer: (input, weights) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_spherical_layer(input, weights)
       return input;
     },
-    productManifoldLayer: (input, _curvatures, _weights) => {
+    productManifoldLayer: (input, curvatures, weights) => {
       stats.hyperbolicOperations++;
       // WASM call: ruvector_product_manifold_layer(input, curvatures, weights)
       return input;
@@ -677,7 +675,7 @@ export function poincareToLorentz(x: Float32Array, c: number = 1): Float32Array 
   const result = new Float32Array(x.length + 1);
   result[0] = (1 + c * normSq) / denom; // Time component
   for (let i = 0; i < x.length; i++) {
-    result[i + 1] = 2 * Math.sqrt(c) * x[i]! / denom;
+    result[i + 1] = 2 * Math.sqrt(c) * x[i] / denom;
   }
   return result;
 }

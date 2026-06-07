@@ -5,7 +5,6 @@
 
 use crate::error::GnnError;
 use ndarray::{Array1, Array2, ArrayView1};
-use rand::SeedableRng;
 use rand_distr::{Distribution, Normal};
 use serde::{Deserialize, Serialize};
 
@@ -17,14 +16,9 @@ pub struct Linear {
 }
 
 impl Linear {
-    /// Create a new linear layer with Xavier/Glorot initialization.
-    /// Uses a deterministic seeded RNG (faster than thread_rng on all platforms,
-    /// especially ARM64) while still producing well-distributed weights.
+    /// Create a new linear layer with Xavier/Glorot initialization
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
-        // Seed from dims so layers with different shapes get distinct weights
-        let seed = (input_dim as u64).wrapping_mul(6364136223846793005)
-            ^ (output_dim as u64).wrapping_mul(1442695040888963407);
-        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+        let mut rng = rand::thread_rng();
 
         // Xavier initialization: scale = sqrt(2.0 / (input_dim + output_dim))
         let scale = (2.0 / (input_dim + output_dim) as f32).sqrt();

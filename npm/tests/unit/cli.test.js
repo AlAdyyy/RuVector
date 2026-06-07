@@ -9,7 +9,7 @@ const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const CLI_PATH = path.join(__dirname, '../../packages/ruvector/bin/cli.js');
+const CLI_PATH = path.join(__dirname, '../../ruvector/bin/ruvector.js');
 const TEMP_DIR = path.join(__dirname, '../fixtures/temp');
 
 // Setup and teardown
@@ -52,12 +52,12 @@ test('CLI - Info Command', async (t) => {
     try {
       const output = execSync(`node ${CLI_PATH} info`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector')
+        cwd: path.join(__dirname, '../../ruvector')
       });
 
       assert.ok(output, 'Should produce output');
       assert.ok(
-        output.includes('Implementation') || output.includes('Backend') || output.includes('Type') || output.includes('ruvector'),
+        output.includes('Backend') || output.includes('Type'),
         'Should display backend type'
       );
     } catch (error) {
@@ -78,17 +78,16 @@ test('CLI - Help Command', async (t) => {
     try {
       const output = execSync(`node ${CLI_PATH}`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector')
+        cwd: path.join(__dirname, '../../ruvector')
       });
+
       assert.ok(output.includes('Usage') || output.includes('Commands'), 'Should display help');
     } catch (error) {
-      // CLI may exit non-zero when showing help — that's OK
-      const combined = (error.stdout || '') + (error.message || '');
-      if (combined.includes('Cannot find module')) {
+      if (error.message.includes('Cannot find module')) {
         console.log('⚠ Skipping CLI test - dependencies not installed');
         assert.ok(true);
       } else {
-        assert.ok(combined.includes('Usage') || combined.includes('Commands'), 'Should display help');
+        throw error;
       }
     }
   });
@@ -97,12 +96,12 @@ test('CLI - Help Command', async (t) => {
     try {
       const output = execSync(`node ${CLI_PATH} --help`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector')
+        cwd: path.join(__dirname, '../../ruvector')
       });
 
       assert.ok(output.includes('Usage') || output.includes('Commands'), 'Should display help');
       assert.ok(output.includes('info'), 'Should list info command');
-      assert.ok(output.includes('create') || output.includes('init'), 'Should list create/init command');
+      assert.ok(output.includes('init'), 'Should list init command');
       assert.ok(output.includes('search'), 'Should list search command');
     } catch (error) {
       if (error.message.includes('Cannot find module')) {
@@ -121,7 +120,7 @@ test('CLI - Version Command', async (t) => {
     try {
       const output = execSync(`node ${CLI_PATH} --version`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector')
+        cwd: path.join(__dirname, '../../ruvector')
       });
 
       assert.ok(output.trim().length > 0, 'Should output version');
@@ -145,7 +144,7 @@ test('CLI - Init Command', async (t) => {
     try {
       const output = execSync(`node ${CLI_PATH} init ${indexPath}`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector')
+        cwd: path.join(__dirname, '../../ruvector')
       });
 
       assert.ok(
@@ -170,7 +169,7 @@ test('CLI - Init Command', async (t) => {
         `node ${CLI_PATH} init ${customPath} --dimension 256 --metric euclidean --type hnsw`,
         {
           encoding: 'utf-8',
-          cwd: path.join(__dirname, '../../packages/ruvector')
+          cwd: path.join(__dirname, '../../ruvector')
         }
       );
 
@@ -195,7 +194,7 @@ test('CLI - Error Handling', async (t) => {
     try {
       execSync(`node ${CLI_PATH} unknown-command`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector'),
+        cwd: path.join(__dirname, '../../ruvector'),
         stdio: 'pipe'
       });
       assert.fail('Should have thrown an error');
@@ -209,7 +208,7 @@ test('CLI - Error Handling', async (t) => {
     try {
       execSync(`node ${CLI_PATH} init`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector'),
+        cwd: path.join(__dirname, '../../ruvector'),
         stdio: 'pipe'
       });
       assert.fail('Should have thrown an error');
@@ -224,7 +223,7 @@ test('CLI - Error Handling', async (t) => {
       const indexPath = path.join(TEMP_DIR, 'invalid-options.bin');
       execSync(`node ${CLI_PATH} init ${indexPath} --dimension invalid`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector'),
+        cwd: path.join(__dirname, '../../ruvector'),
         stdio: 'pipe'
       });
       // May or may not fail depending on validation
@@ -242,7 +241,7 @@ test('CLI - Output Formatting', async (t) => {
     try {
       const output = execSync(`node ${CLI_PATH} info`, {
         encoding: 'utf-8',
-        cwd: path.join(__dirname, '../../packages/ruvector')
+        cwd: path.join(__dirname, '../../ruvector')
       });
 
       // Check for formatting characters (tables, colors, etc.)
@@ -268,7 +267,7 @@ test('CLI - Benchmark Command', async (t) => {
         `node ${CLI_PATH} benchmark --dimension 64 --num-vectors 100 --num-queries 10`,
         {
           encoding: 'utf-8',
-          cwd: path.join(__dirname, '../../packages/ruvector'),
+          cwd: path.join(__dirname, '../../ruvector'),
           timeout: 30000 // 30 second timeout
         }
       );

@@ -12,7 +12,7 @@ import { EventEmitter } from 'events';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { RegionalAgent, RegionalAgentConfig } from './regional-agent';
-import { AgentCoordinator, AgentMetrics, AgentRegistration } from './agent-coordinator';
+import { AgentCoordinator, AgentRegistration } from './agent-coordinator';
 
 const execAsync = promisify(exec);
 
@@ -64,7 +64,7 @@ export class SwarmManager extends EventEmitter {
     private coordinator: AgentCoordinator
   ) {
     super();
-    void this.initialize();
+    this.initialize();
   }
 
   /**
@@ -82,8 +82,8 @@ export class SwarmManager extends EventEmitter {
           `npx claude-flow@alpha hooks pre-task --description "Initialize swarm manager with ${this.config.topology} topology"`
         );
 
-        // Initialize swarm topology (JSON.stringify kept for side-effect validation)
-        void JSON.stringify({
+        // Initialize swarm topology
+        const topologyCmd = JSON.stringify({
           topology: this.config.topology,
           maxAgents: this.config.maxAgentsPerRegion * this.config.regions.length,
         }).replace(/"/g, '\\"');
@@ -127,7 +127,7 @@ export class SwarmManager extends EventEmitter {
   private async spawnInitialAgents(): Promise<void> {
     console.log('[SwarmManager] Spawning initial agents...');
 
-    const spawnPromises: Promise<string>[] = [];
+    const spawnPromises: Promise<void>[] = [];
 
     for (const region of this.config.regions) {
       for (let i = 0; i < this.config.minAgentsPerRegion; i++) {
@@ -211,20 +211,20 @@ export class SwarmManager extends EventEmitter {
    */
   private setupAgentEventHandlers(agent: RegionalAgent, config: RegionalAgentConfig): void {
     // Forward agent events to swarm manager
-    agent.on('metrics:report', (metrics: AgentMetrics) => {
+    agent.on('metrics:report', (metrics) => {
       this.coordinator.updateAgentMetrics(metrics);
     });
 
-    agent.on('query:completed', (data: Record<string, unknown>) => {
+    agent.on('query:completed', (data) => {
       this.emit('query:completed', { ...data, agentId: config.agentId });
     });
 
-    agent.on('query:failed', (data: Record<string, unknown>) => {
+    agent.on('query:failed', (data) => {
       this.emit('query:failed', { ...data, agentId: config.agentId });
     });
 
-    agent.on('sync:broadcast', (payload: import('./regional-agent').SyncPayload) => {
-      void this.handleSyncBroadcast(payload, config.region);
+    agent.on('sync:broadcast', (payload) => {
+      this.handleSyncBroadcast(payload, config.region);
     });
 
     agent.on('agent:shutdown', () => {
@@ -235,7 +235,7 @@ export class SwarmManager extends EventEmitter {
   /**
    * Handle sync broadcast from agent
    */
-  private async handleSyncBroadcast(payload: import('./regional-agent').SyncPayload, sourceRegion: string): Promise<void> {
+  private async handleSyncBroadcast(payload: any, sourceRegion: string): Promise<void> {
     // Broadcast to all agents in other regions
     for (const [agentId, agent] of this.agents.entries()) {
       const agentConfig = this.agentConfigs.get(agentId);
@@ -311,7 +311,7 @@ export class SwarmManager extends EventEmitter {
   /**
    * Perform health checks on all agents
    */
-  private performHealthChecks(): void {
+  private async performHealthChecks(): Promise<void> {
     const unhealthyAgents: string[] = [];
 
     for (const [agentId, agent] of this.agents.entries()) {
@@ -341,7 +341,7 @@ export class SwarmManager extends EventEmitter {
    */
   private startAutoScaling(): void {
     this.autoScaleTimer = setInterval(() => {
-      void this.evaluateScaling();
+      this.evaluateScaling();
     }, 10000); // Evaluate every 10 seconds
   }
 
@@ -508,6 +508,7 @@ export class SwarmManager extends EventEmitter {
 
     if (this.config.enableClaudeFlowHooks) {
       try {
+        const serialized = JSON.stringify(value).replace(/"/g, '\\"');
         await execAsync(
           `npx claude-flow@alpha hooks post-edit --file "swarm-memory" --memory-key "${key}"`
         );
@@ -520,16 +521,15 @@ export class SwarmManager extends EventEmitter {
   /**
    * Retrieve data from swarm memory
    */
-  private retrieveFromMemory(key: string): Promise<unknown> {
-    return Promise.resolve(this.swarmMemory.get(key) as unknown);
+  private async retrieveFromMemory(key: string): Promise<any> {
+    return this.swarmMemory.get(key);
   }
 
   /**
    * Remove data from swarm memory
    */
-  private removeFromMemory(key: string): Promise<void> {
+  private async removeFromMemory(key: string): Promise<void> {
     this.swarmMemory.delete(key);
-    return Promise.resolve();
   }
 
   /**

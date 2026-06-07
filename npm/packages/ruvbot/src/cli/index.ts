@@ -67,28 +67,26 @@ export function createCLI(): Command {
     .option('--debug', 'Enable debug logging')
     .option('--no-api', 'Disable API server')
     .option('--channel <channel>', 'Enable specific channel (slack, discord, telegram)')
-    .action(async (options: { port: string; config?: string; remote?: boolean; debug?: boolean; api?: boolean; channel?: string }) => {
+    .action(async (options) => {
       const spinner = ora('Starting RuvBot...').start();
 
       try {
-        let config: ReturnType<typeof ConfigManager.prototype.getConfig>;
+        let config;
         if (options.config) {
           const fs = await import('fs/promises');
           const configContent = await fs.readFile(options.config, 'utf-8');
-          config = JSON.parse(configContent) as ReturnType<typeof ConfigManager.prototype.getConfig>;
+          config = JSON.parse(configContent);
         } else {
           config = ConfigManager.fromEnv().getConfig();
         }
 
         const bot = new RuvBot({
-          config: {
-            ...config,
-            api: options.api !== false ? {
-              ...config.api,
-              port: parseInt(options.port, 10),
-            } : config.api,
-          },
+          ...config,
           debug: options.debug,
+          api: options.api !== false ? {
+            ...config.api,
+            port: parseInt(options.port, 10),
+          } : undefined,
         });
 
         await bot.start();
@@ -118,13 +116,13 @@ export function createCLI(): Command {
           }
         };
 
-        process.on('SIGINT', () => { void shutdown(); });
-        process.on('SIGTERM', () => { void shutdown(); });
-      } catch (error: unknown) {
+        process.on('SIGINT', shutdown);
+        process.on('SIGTERM', shutdown);
+      } catch (error: any) {
         spinner.fail(chalk.red('Failed to start RuvBot'));
-        console.error(chalk.red(`\nError: ${error instanceof Error ? error.message : String(error)}`));
+        console.error(chalk.red(`\nError: ${error.message}`));
         if (options.debug) {
-          if (error instanceof Error) console.error(error.stack);
+          console.error(error.stack);
         }
         process.exit(1);
       }
@@ -137,14 +135,15 @@ export function createCLI(): Command {
     .option('-y, --yes', 'Skip prompts with defaults')
     .option('--wizard', 'Run interactive wizard')
     .option('--preset <preset>', 'Use preset: minimal, standard, full')
-    .action(async (options: { yes?: boolean; wizard?: boolean; preset?: string }) => {
+    .action(async (options) => {
       const spinner = ora('Initializing RuvBot...').start();
 
       try {
         const fs = await import('fs/promises');
+        const path = await import('path');
 
         // Determine config based on preset
-        let config: Record<string, unknown>;
+        let config;
         switch (options.preset) {
           case 'minimal':
             config = {
@@ -234,9 +233,9 @@ RUVBOT_LOG_LEVEL=info
         console.log(chalk.cyan('     ruvbot doctor'));
         console.log('\n  3. Start the bot:');
         console.log(chalk.cyan('     ruvbot start'));
-      } catch (error: unknown) {
+      } catch (error: any) {
         spinner.fail(chalk.red('Failed to initialize'));
-        console.error(error instanceof Error ? error.message : String(error));
+        console.error(error.message);
         process.exit(1);
       }
     });
@@ -249,21 +248,14 @@ RUVBOT_LOG_LEVEL=info
     .option('--edit', 'Open config in editor')
     .option('--validate', 'Validate configuration')
     .option('--json', 'Output as JSON')
-    .action(async (options: { show?: boolean; edit?: boolean; validate?: boolean; json?: boolean }) => {
+    .action(async (options) => {
       try {
         const fs = await import('fs/promises');
 
         if (options.show || (!options.edit && !options.validate)) {
           try {
             const configContent = await fs.readFile('ruvbot.config.json', 'utf-8');
-            const config = JSON.parse(configContent) as {
-              name?: string; port?: number;
-              storage?: { type?: string };
-              memory?: { dimensions?: number };
-              skills?: { enabled?: string[] };
-              security?: { enabled?: boolean };
-              plugins?: { enabled?: boolean };
-            };
+            const config = JSON.parse(configContent);
 
             if (options.json) {
               console.log(JSON.stringify(config, null, 2));
@@ -272,9 +264,9 @@ RUVBOT_LOG_LEVEL=info
               console.log('─'.repeat(50));
               console.log(`Name:       ${chalk.cyan(config.name)}`);
               console.log(`Port:       ${chalk.cyan(config.port)}`);
-              console.log(`Storage:    ${chalk.cyan(config.storage?.type ?? 'sqlite')}`);
-              console.log(`Memory:     ${chalk.cyan(config.memory?.dimensions ?? 384)} dimensions`);
-              console.log(`Skills:     ${chalk.cyan((config.skills?.enabled ?? []).join(', '))}`);
+              console.log(`Storage:    ${chalk.cyan(config.storage?.type || 'sqlite')}`);
+              console.log(`Memory:     ${chalk.cyan(config.memory?.dimensions || 384)} dimensions`);
+              console.log(`Skills:     ${chalk.cyan((config.skills?.enabled || []).join(', '))}`);
               console.log(`Security:   ${config.security?.enabled ? chalk.green('ON') : chalk.red('OFF')}`);
               console.log(`Plugins:    ${config.plugins?.enabled ? chalk.green('ON') : chalk.red('OFF')}`);
               console.log('─'.repeat(50));
@@ -293,8 +285,8 @@ RUVBOT_LOG_LEVEL=info
 
             // Additional validation could be added here
             console.log(chalk.green('✓ All required fields present'));
-          } catch (error: unknown) {
-            console.log(chalk.red(`✗ Configuration error: ${error instanceof Error ? error.message : String(error)}`));
+          } catch (error: any) {
+            console.log(chalk.red(`✗ Configuration error: ${error.message}`));
             process.exit(1);
           }
         }
@@ -304,8 +296,8 @@ RUVBOT_LOG_LEVEL=info
           const editor = process.env.EDITOR || 'nano';
           execSync(`${editor} ruvbot.config.json`, { stdio: 'inherit' });
         }
-      } catch (error: unknown) {
-        console.error(chalk.red(`Config error: ${error instanceof Error ? error.message : String(error)}`));
+      } catch (error: any) {
+        console.error(chalk.red(`Config error: ${error.message}`));
         process.exit(1);
       }
     });
@@ -316,8 +308,8 @@ RUVBOT_LOG_LEVEL=info
     .description('Show bot status and health')
     .option('-w, --watch', 'Watch mode (refresh every 2s)')
     .option('--json', 'Output as JSON')
-    .action(async (options: { watch?: boolean; json?: boolean }) => {
-      const showStatus = (): void => {
+    .action(async (options) => {
+      const showStatus = async () => {
         try {
           const config = ConfigManager.fromEnv().getConfig();
 
@@ -351,12 +343,12 @@ RUVBOT_LOG_LEVEL=info
           console.log(`Memory:      ${formatBytes(status.memory.heapUsed)} / ${formatBytes(status.memory.heapTotal)}`);
           console.log(`Storage:     ${chalk.cyan(status.config.storage)}`);
           console.log('─'.repeat(40));
-        } catch (error: unknown) {
-          console.error(chalk.red(`Status error: ${error instanceof Error ? error.message : String(error)}`));
+        } catch (error: any) {
+          console.error(chalk.red(`Status error: ${error.message}`));
         }
       };
 
-      showStatus();
+      await showStatus();
 
       if (options.watch && !options.json) {
         console.log(chalk.gray('\nRefreshing every 2s... (Ctrl+C to stop)'));
@@ -371,7 +363,7 @@ RUVBOT_LOG_LEVEL=info
     .command('list')
     .description('List available skills')
     .option('--json', 'Output as JSON')
-    .action((options: { json?: boolean }) => {
+    .action((options) => {
       const builtinSkills = [
         { name: 'search', description: 'Semantic search in memory', enabled: true },
         { name: 'summarize', description: 'Summarize text content', enabled: true },

@@ -13,32 +13,22 @@ WASM bindings for rvAgent — run AI agents entirely in the browser or Node.js.
 ## Installation
 
 ```bash
-npm install @ruvector/rvagent-wasm
-```
-
-## Building from Source
-
-```bash
+# Build from source
 cd crates/rvAgent/rvagent-wasm
+wasm-pack build --target web
 
-# Node.js target (used by ruflo / @claude-flow/cli >= 3.10.4)
-wasm-pack build --target nodejs --release
-
-# Browser target
-wasm-pack build --target web --release
+# Or use the pre-built package
+npm install rvagent-wasm  # (Not yet published)
 ```
 
 ## Usage
 
-### WasmAgent (Node.js / ruflo integration)
+### WasmAgent
 
 ```javascript
-// Node.js CommonJS (used by ruflo / @claude-flow/cli)
-const { WasmAgent, JsModelProvider } = require('@ruvector/rvagent-wasm/rvagent_wasm.js');
+import init, { WasmAgent } from 'rvagent-wasm';
 
-// Browser ESM
-// import init, { WasmAgent } from '@ruvector/rvagent-wasm';
-// await init();
+await init();
 
 // Create an agent
 const agent = new WasmAgent(JSON.stringify({
@@ -48,13 +38,15 @@ const agent = new WasmAgent(JSON.stringify({
   max_turns: 50
 }));
 
-// Wire a real LLM via JsModelProvider (ADR-129 Gap 1 pattern)
-const provider = new JsModelProvider(async (messagesJson) => {
+// Connect a model provider (calls your LLM API)
+agent.set_model_provider(async (messagesJson) => {
   const messages = JSON.parse(messagesJson);
-  const response = await callYourLLM({ messages });
-  return JSON.stringify({ role: 'assistant', content: response.content });
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ messages })
+  });
+  return (await response.json()).content;
 });
-agent.set_model_provider(provider.complete.bind(provider));
 
 // Send a prompt
 const result = await agent.prompt("Write a hello world function");
@@ -74,7 +66,9 @@ console.log(agent.get_todos());       // []
 Run an MCP server entirely in the browser:
 
 ```javascript
-const { WasmMcpServer } = require('@ruvector/rvagent-wasm/rvagent_wasm.js');
+import init, { WasmMcpServer } from 'rvagent-wasm';
+
+await init();
 
 const mcp = new WasmMcpServer("rvagent-wasm");
 
@@ -98,24 +92,32 @@ const result = mcp.call_tool("write_file", JSON.stringify({
 
 ### Gallery System
 
-Access built-in agent templates directly:
+Access built-in agent templates:
 
 ```javascript
-const { WasmGallery } = require('@ruvector/rvagent-wasm/rvagent_wasm.js');
-
-const gallery = new WasmGallery();
-
 // List all templates
-const templates = gallery.list();
+const templates = mcp.handle_request(JSON.stringify({
+  jsonrpc: "2.0",
+  id: 1,
+  method: "gallery/list",
+  params: {}
+}));
 
 // Search templates
-const results = gallery.search("security testing");
+const searchResults = mcp.handle_request(JSON.stringify({
+  jsonrpc: "2.0",
+  id: 2,
+  method: "gallery/search",
+  params: { query: "coding assistant" }
+}));
 
-// Get template details
-const coder = gallery.get("coder");
-
-// Load as RVF container
-const rvfBytes = gallery.loadRvf("coder"); // Uint8Array
+// Load a template
+const loaded = mcp.handle_request(JSON.stringify({
+  jsonrpc: "2.0",
+  id: 3,
+  method: "gallery/load",
+  params: { id: "claude-code" }
+}));
 ```
 
 ## Available Tools
@@ -181,22 +183,20 @@ const rvfBytes = gallery.loadRvf("coder"); // Uint8Array
 | `name()` | Get server name |
 | `version()` | Get server version |
 
-## Development
+## Building
 
 ```bash
 # Install wasm-pack
 cargo install wasm-pack
 
-# Build for Node.js (published artifact)
-wasm-pack build --target nodejs --release
-
 # Build for web
-wasm-pack build --target web --release
+wasm-pack build --target web
 
-# Run Rust unit tests (61 tests, no WASM runtime needed)
+# Build for Node.js
+wasm-pack build --target nodejs
+
+# Run tests
 cargo test
-
-# Run WASM tests in browser
 wasm-pack test --headless --chrome
 ```
 
@@ -225,19 +225,6 @@ rvagent-wasm/
     ├── rvagent_wasm.d.ts
     └── rvagent_wasm_bg.wasm
 ```
-
-## ruflo / @claude-flow/cli Integration
-
-Compatible with `@claude-flow/cli >= 3.10.4`. ADR-129 closes two gaps in the ruflo-side wiring:
-
-- **Gap 1**: Wire `JsModelProvider` so `wasm_agent_prompt` uses a real LLM (not echo stub)
-- **Gap 2**: Call `WasmRvfBuilder.addMcpTools()` in `buildRvfContainer` and expose `wasm_agent_compose`
-
-All needed methods (`JsModelProvider`, `set_model_provider`, `addMcpTools`, `get_state`,
-`get_todos`, `reset`) are implemented in this WASM package. The gaps are purely TypeScript
-wiring issues in the ruflo consumer layer.
-
-See [ADR-129](https://github.com/ruvnet/ruflo/blob/main/v3/docs/adr/ADR-129-rvagent-full-integration.md).
 
 ## Related Crates
 

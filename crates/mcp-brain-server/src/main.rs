@@ -32,14 +32,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Wait 30s before first cycle (let startup finish, data load)
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 
-        // Run an initial enhanced cycle on startup to bootstrap cognitive state (full retrain).
-        // spawn_blocking avoids starving HTTP handlers during the CPU-intensive bootstrap.
-        let result = {
-            let state = train_state.clone();
-            tokio::task::spawn_blocking(move || routes::run_enhanced_training_cycle(&state, true))
-                .await
-                .unwrap_or_default()
-        };
+        // Run an initial enhanced cycle on startup to bootstrap cognitive state (full retrain)
+        let result = routes::run_enhanced_training_cycle(&train_state, true);
         tracing::info!(
             "Initial cognitive bootstrap: props={}, inferences={}, voice={}, curiosity={}, strange_loop={:.4}",
             result.propositions_extracted, result.inferences_derived,
@@ -121,14 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // to benefit from incremental processing; the function auto-forces a full
                 // retrain every 24h.
                 if new_memories > 0 || new_votes > 0 || tick_count % 15 == 0 {
-                    let result = {
-                        let state = train_state.clone();
-                        tokio::task::spawn_blocking(move || {
-                            routes::run_enhanced_training_cycle(&state, false)
-                        })
-                        .await
-                        .unwrap_or_default()
-                    };
+                    let result = routes::run_enhanced_training_cycle(&train_state, false);
                     tracing::info!(
                         "Cognitive cycle #{} ({}): props={}, inferences={}, voice={}, auto_votes={}, \
                          curiosity={}, sona_patterns={}, strange_loop={:.4}, lora_auto={}, processed={}/{}",

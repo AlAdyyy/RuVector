@@ -11,9 +11,11 @@ import type {
   MoEResult,
   MambaResult,
   AttentionScores,
+  AttentionMetadata,
   QueryDag,
   GatePacket,
   AttentionConfig,
+  Tensor,
 } from './types';
 
 // ============================================================================
@@ -258,36 +260,37 @@ export type AttentionMechanism =
  * @param config Optional configuration
  * @returns Initialized attention engine
  */
-export function createAttentionEngine(_config?: AttentionConfig): AttentionEngine {
+export function createAttentionEngine(config?: AttentionConfig): AttentionEngine {
   // Implementation delegated to WASM module
   return {
-    scaledDot: (Q, _K, _V, _mask) => {
+    scaledDot: (Q, K, V, mask) => {
       // WASM call: ruvector_attention_scaled_dot(Q, K, V, mask)
+      const dk = Math.sqrt(Q.length / K.length);
       const scores = new Float32Array(Q.length);
       // Placeholder for WASM implementation
       return scores;
     },
-    multiHead: (query, _keys, _values, _config) => {
+    multiHead: (query, keys, values, config) => {
       // WASM call: ruvector_attention_multi_head(query, keys, values, config)
       return new Float32Array(query.length);
     },
-    hyperbolic: (query, _keys, _values, _curvature = -1) => {
+    hyperbolic: (query, keys, values, curvature = -1) => {
       // WASM call: ruvector_attention_hyperbolic(query, keys, values, curvature)
       return new Float32Array(query.length);
     },
-    linear: (query, _keys, _values, _kernel = 'elu') => {
+    linear: (query, keys, values, kernel = 'elu') => {
       // WASM call: ruvector_attention_linear(query, keys, values, kernel)
       return new Float32Array(query.length);
     },
-    flash: (query, _keys, _values, _blockSize = 256) => {
+    flash: (query, keys, values, blockSize = 256) => {
       // WASM call: ruvector_attention_flash(query, keys, values, blockSize)
       return new Float32Array(query.length);
     },
-    localGlobal: (query, _keys, _values, _windowSize, _globalIndices = []) => {
+    localGlobal: (query, keys, values, windowSize, globalIndices = []) => {
       // WASM call: ruvector_attention_local_global(...)
       return new Float32Array(query.length);
     },
-    moe: (query, _keys, _values, numExperts, _topK, _balanceLoss = true) => {
+    moe: (query, keys, values, numExperts, topK, balanceLoss = true) => {
       // WASM call: ruvector_attention_moe(...)
       return {
         output: new Float32Array(query.length),
@@ -296,7 +299,7 @@ export function createAttentionEngine(_config?: AttentionConfig): AttentionEngin
         loadBalanceLoss: 0,
       };
     },
-    mamba: (input, state, _config) => {
+    mamba: (input, state, config) => {
       // WASM call: ruvector_attention_mamba(input, state, config)
       return {
         output: new Float32Array(input.length),
@@ -304,31 +307,31 @@ export function createAttentionEngine(_config?: AttentionConfig): AttentionEngin
         deltaTime: 0,
       };
     },
-    dagTopological: (_dag) => {
+    dagTopological: (dag) => {
       // WASM call: ruvector_dag_topological(dag)
       return createEmptyScores('dag-topological');
     },
-    dagMincutGated: (_dag, _gatePacket) => {
+    dagMincutGated: (dag, gatePacket) => {
       // WASM call: ruvector_dag_mincut_gated(dag, gatePacket)
       return createEmptyScores('dag-mincut');
     },
-    dagHierarchical: (_dag, _levels = 3) => {
+    dagHierarchical: (dag, levels = 3) => {
       // WASM call: ruvector_dag_hierarchical(dag, levels)
       return createEmptyScores('dag-hierarchical');
     },
-    dagSpectral: (_dag, _numEigenvectors = 16) => {
+    dagSpectral: (dag, numEigenvectors = 16) => {
       // WASM call: ruvector_dag_spectral(dag, numEigenvectors)
       return createEmptyScores('dag-spectral');
     },
-    dagFlow: (_dag, _sourceIds, _sinkIds) => {
+    dagFlow: (dag, sourceIds, sinkIds) => {
       // WASM call: ruvector_dag_flow(dag, sourceIds, sinkIds)
       return createEmptyScores('dag-flow');
     },
-    dagCausal: (_dag) => {
+    dagCausal: (dag) => {
       // WASM call: ruvector_dag_causal(dag)
       return createEmptyScores('dag-causal');
     },
-    dagSparse: (_dag, _sparsityRatio = 0.9) => {
+    dagSparse: (dag, sparsityRatio = 0.9) => {
       // WASM call: ruvector_dag_sparse(dag, sparsityRatio)
       return createEmptyScores('dag-sparse');
     },
@@ -378,10 +381,10 @@ export function listAttentionMechanisms(): AttentionMechanism[] {
  * @param iterations Number of iterations
  * @returns Benchmark results
  */
-export function benchmarkAttention(
+export async function benchmarkAttention(
   mechanism: AttentionMechanism,
-  _inputSize: number,
-  _iterations: number = 100
+  inputSize: number,
+  iterations: number = 100
 ): Promise<{
   mechanism: AttentionMechanism;
   avgTimeMs: number;
@@ -389,10 +392,10 @@ export function benchmarkAttention(
   memoryPeakBytes: number;
 }> {
   // Placeholder for benchmark implementation
-  return Promise.resolve({
+  return {
     mechanism,
     avgTimeMs: 0,
     throughputOpsPerSec: 0,
     memoryPeakBytes: 0,
-  });
+  };
 }

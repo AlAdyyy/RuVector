@@ -605,15 +605,11 @@ impl CoherenceEngine {
             self.edges.remove(edge_id);
             self.edge_scopes.remove(edge_id);
             self.residual_cache.remove(edge_id);
-            let mut stats = self.stats.write();
-            stats.edge_count = stats.edge_count.saturating_sub(1);
+            self.stats.write().edge_count = self.stats.read().edge_count.saturating_sub(1);
         }
 
         self.increment_fingerprint();
-        {
-            let mut stats = self.stats.write();
-            stats.node_count = stats.node_count.saturating_sub(1);
-        }
+        self.stats.write().node_count = self.stats.read().node_count.saturating_sub(1);
 
         Ok(node.state)
     }
@@ -743,10 +739,7 @@ impl CoherenceEngine {
         self.edge_scopes.remove(edge_id);
         self.residual_cache.remove(edge_id);
         self.increment_fingerprint();
-        {
-            let mut stats = self.stats.write();
-            stats.edge_count = stats.edge_count.saturating_sub(1);
-        }
+        self.stats.write().edge_count = self.stats.read().edge_count.saturating_sub(1);
 
         Ok(edge)
     }

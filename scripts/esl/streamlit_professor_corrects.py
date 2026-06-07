@@ -140,7 +140,10 @@ def get_professor_response(messages, system_prompt):
 
 # UI Layout
 st.title("🎓 Professor Corrects")
-st.subheader("Elite ESL Coaching with Krashen-NLP Integration")
+if st.checkbox("Native Camp Mode (Compact UI)"):
+    st.subheader("Boutique ESL Coaching")
+else:
+    st.subheader("Elite ESL Coaching with Krashen-NLP Integration")
 
 with st.sidebar:
     st.header("Student Profile")
@@ -243,6 +246,10 @@ if st.session_state.messages:
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
             full_response = ""
+
+            # Action button for quick copy (OODA loop improvement)
+            if st.button("📋 Ready to Copy Feedback", key=f"copy_{len(st.session_state.messages)}"):
+                st.toast("Feedback generated below - simply select and copy!")
 
             try:
                 student = get_student(st.session_state.student_profile["name"])

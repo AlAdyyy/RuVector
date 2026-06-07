@@ -10,13 +10,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "types": ["node"],
-    "paths": {
-      "@ruvector/agentic-synth": ["../agentic-synth/src/index.ts"],
-      "@ruvector/agentic-synth/*": ["../agentic-synth/src/*"]
-    }
+    "rootDir": "./src",
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

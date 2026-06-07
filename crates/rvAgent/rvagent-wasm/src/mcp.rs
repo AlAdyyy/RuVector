@@ -457,11 +457,11 @@ impl WasmMcpServer {
             })
             .collect();
 
-        // Sort by relevance (descending). Use unwrap_or to handle NaN gracefully.
+        // Sort by relevance (descending)
         results.sort_by(|a, b| {
             let ra = a.get("relevance").and_then(|v| v.as_f64()).unwrap_or(0.0);
             let rb = b.get("relevance").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            rb.partial_cmp(&ra).unwrap_or(std::cmp::Ordering::Equal)
+            rb.partial_cmp(&ra).unwrap()
         });
 
         JsonRpcResponse::success(

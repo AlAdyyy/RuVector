@@ -103,7 +103,7 @@ class Intelligence {
   private load(): IntelligenceData {
     try {
       if (fs.existsSync(INTEL_PATH)) {
-        return JSON.parse(fs.readFileSync(INTEL_PATH, 'utf-8')) as IntelligenceData;
+        return JSON.parse(fs.readFileSync(INTEL_PATH, 'utf-8'));
       }
     } catch {}
     return {
@@ -138,7 +138,7 @@ class Intelligence {
   }
 
   private embed(text: string): number[] {
-    const embedding = new Array<number>(64).fill(0);
+    const embedding = new Array(64).fill(0);
     for (let i = 0; i < text.length; i++) {
       const idx = (text.charCodeAt(i) + i * 7) % 64;
       embedding[idx] += 1.0;
@@ -552,7 +552,7 @@ hooks.command('init')
     let settings: Record<string, unknown> = {};
     if (fs.existsSync(settingsPath)) {
       try {
-        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as Record<string, unknown>;
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
       } catch {}
     }
 
@@ -583,7 +583,7 @@ hooks.command('install')
     let settings: Record<string, unknown> = {};
     if (fs.existsSync(settingsPath)) {
       try {
-        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as Record<string, unknown>;
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
       } catch {}
     }
 
@@ -987,18 +987,17 @@ hooks.command('lsp-diagnostic')
     const intel = new Intelligence();
 
     // Read hook input from stdin if available
-    interface HookInput { tool_input?: { file?: string; severity?: string; message?: string } }
-    let stdinData: HookInput | null = null;
+    let stdinData: any = null;
     try {
       const inputPath = process.env.CLAUDE_HOOK_INPUT;
       if (inputPath && fs.existsSync(inputPath)) {
-        stdinData = JSON.parse(fs.readFileSync(inputPath, 'utf-8')) as HookInput;
+        stdinData = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
       }
     } catch { /* ignore */ }
 
-    const file = opts.file ?? stdinData?.tool_input?.file ?? 'unknown';
-    const severity = opts.severity ?? stdinData?.tool_input?.severity ?? 'info';
-    const message = opts.message ?? stdinData?.tool_input?.message ?? '';
+    const file = opts.file || stdinData?.tool_input?.file || 'unknown';
+    const severity = opts.severity || stdinData?.tool_input?.severity || 'info';
+    const message = opts.message || stdinData?.tool_input?.message || '';
 
     // Learn from LSP diagnostics
     if (severity === 'error' || severity === 'warning') {

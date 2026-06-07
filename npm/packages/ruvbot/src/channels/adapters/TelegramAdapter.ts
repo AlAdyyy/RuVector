@@ -102,14 +102,15 @@ export class TelegramAdapter extends BaseAdapter {
       const telegrafModule = await this.loadTelegraf();
 
       if (telegrafModule) {
-        const TelegrafCtor = (telegrafModule as { Telegraf: new (token: string) => unknown })['Telegraf'];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const Telegraf = telegrafModule.Telegraf as any;
 
-        this.bot = new TelegrafCtor(credentials.token);
+        this.bot = new Telegraf(credentials.token);
 
         // Register message handler
         (this.bot as { on: (event: string, handler: (ctx: { message: TelegramMessage }) => void) => void }).on('message', (ctx: { message: TelegramMessage }) => {
           const unified = this.telegramToUnified(ctx.message);
-          void this.emitMessage(unified);
+          this.emitMessage(unified);
         });
 
         // Start polling or webhook
@@ -137,13 +138,12 @@ export class TelegramAdapter extends BaseAdapter {
   /**
    * Disconnect from Telegram
    */
-  disconnect(): Promise<void> {
+  async disconnect(): Promise<void> {
     if (this.bot) {
       (this.bot as { stop?: (signal?: string) => void }).stop?.('SIGTERM');
       this.bot = null;
     }
     this.status.connected = false;
-    return Promise.resolve();
   }
 
   /**
@@ -201,11 +201,12 @@ export class TelegramAdapter extends BaseAdapter {
   // Private Methods
   // ==========================================================================
 
-  private async loadTelegraf(): Promise<{ Telegraf: new (token: string) => unknown } | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async loadTelegraf(): Promise<any | null> {
     try {
       // Dynamic import - telegraf is optional
       // @ts-expect-error - telegraf may not be installed
-      return await import('telegraf').catch(() => null) as { Telegraf: new (token: string) => unknown };
+      return await import('telegraf').catch(() => null);
     } catch {
       return null;
     }

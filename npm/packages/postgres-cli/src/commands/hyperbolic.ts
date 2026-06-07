@@ -8,6 +8,7 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
+import Table from 'cli-table3';
 import type { RuVectorClient } from '../client.js';
 
 const HYPERBOLIC_REQUIRES_EXTENSION_MSG = `

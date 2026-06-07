@@ -176,11 +176,9 @@ export interface CICDConfig extends Partial<SynthConfig> {
  * });
  * ```
  */
-type ResolvedCICDConfig = CICDConfig & Required<Pick<CICDConfig, 'pipelineNames' | 'environments' | 'failureRate'>>;
-
 export class CICDDataGenerator extends EventEmitter {
   private synth: AgenticSynth;
-  private config: ResolvedCICDConfig;
+  private config: CICDConfig;
   private executions: PipelineExecution[] = [];
   private deployments: DeploymentRecord[] = [];
   private alerts: MonitoringAlert[] = [];

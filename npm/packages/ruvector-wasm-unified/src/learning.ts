@@ -267,11 +267,11 @@ export function createLearningEngine(config?: LearningConfig): LearningEngine {
 
   // Implementation delegated to WASM module
   return {
-    microLoraAdapt: (embedding, _opType, _loraConfig) => {
+    microLoraAdapt: (embedding, opType, loraConfig) => {
       // WASM call: ruvector_learning_micro_lora(embedding, opType, config)
       return new Float32Array(embedding.length);
     },
-    sonaPreQuery: (_dag, _contextWindow = 128) => {
+    sonaPreQuery: (dag, contextWindow = 128) => {
       // WASM call: ruvector_learning_sona_pre_query(dag, contextWindow)
       return {
         original: new Float32Array(0),
@@ -280,10 +280,10 @@ export function createLearningEngine(config?: LearningConfig): LearningEngine {
         confidence: 0,
       };
     },
-    btspOneShotLearn: (_pattern, _signal, _btspConfig) => {
+    btspOneShotLearn: (pattern, signal, btspConfig) => {
       // WASM call: ruvector_learning_btsp(pattern, signal, config)
     },
-    updateFromTrajectory: (_trajectory, _algorithm = 'ppo') => {
+    updateFromTrajectory: (trajectory, algorithm = 'ppo') => {
       // WASM call: ruvector_learning_update_trajectory(trajectory, algorithm)
       return {
         gradient: new Float32Array(0),
@@ -292,21 +292,21 @@ export function createLearningEngine(config?: LearningConfig): LearningEngine {
         klDivergence: 0,
       };
     },
-    computeAdvantages: (rewards, _values, _gamma = 0.99, _lambda = 0.95) => {
+    computeAdvantages: (rewards, values, gamma = 0.99, lambda = 0.95) => {
       // WASM call: ruvector_learning_compute_gae(rewards, values, gamma, lambda)
       return new Float32Array(rewards.length);
     },
-    sampleAction: (_state, _temperature = 1.0) => {
+    sampleAction: (state, temperature = 1.0) => {
       // WASM call: ruvector_learning_sample_action(state, temperature)
       return { action: 0, logProb: 0 };
     },
-    ewcRegularize: (_taskId, _importance) => {
+    ewcRegularize: (taskId, importance) => {
       // WASM call: ruvector_learning_ewc(taskId, importance)
     },
-    progressiveAddColumn: (_taskId, _hiddenSize = 256) => {
+    progressiveAddColumn: (taskId, hiddenSize = 256) => {
       // WASM call: ruvector_learning_progressive_add(taskId, hiddenSize)
     },
-    experienceReplay: (_bufferSize = 10000, _batchSize = 32) => {
+    experienceReplay: (bufferSize = 10000, batchSize = 32) => {
       // WASM call: ruvector_learning_replay(bufferSize, batchSize)
       return {
         states: [],
@@ -316,11 +316,11 @@ export function createLearningEngine(config?: LearningConfig): LearningEngine {
         dones: [],
       };
     },
-    mamlInnerLoop: (_supportSet, _innerSteps = 5, _innerLr = 0.01) => {
+    mamlInnerLoop: (supportSet, innerSteps = 5, innerLr = 0.01) => {
       // WASM call: ruvector_learning_maml_inner(supportSet, innerSteps, innerLr)
       return new Float32Array(0);
     },
-    reptileUpdate: (_taskBatch, _epsilon = 0.1) => {
+    reptileUpdate: (taskBatch, epsilon = 0.1) => {
       // WASM call: ruvector_learning_reptile(taskBatch, epsilon)
     },
     getStats: () => ({
@@ -333,13 +333,13 @@ export function createLearningEngine(config?: LearningConfig): LearningEngine {
       patternsLearned: 0,
       adaptationCount: 0,
     }),
-    reset: (_keepWeights = false) => {
+    reset: (keepWeights = false) => {
       // WASM call: ruvector_learning_reset(keepWeights)
     },
-    saveCheckpoint: async (_path) => {
+    saveCheckpoint: async (path) => {
       // WASM call: ruvector_learning_save(path)
     },
-    loadCheckpoint: async (_path) => {
+    loadCheckpoint: async (path) => {
       // WASM call: ruvector_learning_load(path)
     },
   };

@@ -222,14 +222,14 @@ export class EmbeddingEnrichment {
   /**
    * Generate local embedding (placeholder)
    */
-  private generateLocalEmbedding(_text: string): Promise<EmbeddingResult> {
+  private async generateLocalEmbedding(_text: string): Promise<EmbeddingResult> {
     // This would use a local embedding model
     // For now, return a random embedding
-    return Promise.resolve({
+    return {
       embedding: this.generateRandomEmbedding(),
       model: 'local',
       dimensions: this.config.dimensions!
-    });
+    };
   }
 
   /**

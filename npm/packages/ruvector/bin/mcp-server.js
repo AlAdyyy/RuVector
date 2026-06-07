@@ -2301,72 +2301,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'hooks_route_enhanced': {
-        // Issue #463/#422: previously shelled out via `npx ruvector hooks
-        // route-enhanced …` and execSync'd it with a 30s timeout. `npx`
-        // package-resolution + bin-launch can exceed 30s on cold cache
-        // even though the underlying work finishes in ~500ms, so MCP
-        // callers got deterministic `spawnSync /bin/sh ETIMEDOUT`. Run the
-        // same logic in-process against the live Intelligence instance.
         try {
-          const baseRoute = await intel.route(args.task, args.file);
-
-          let coverageWeight = null;
-          let complexity = null;
-
-          if (args.file) {
-            try {
-              const covMod = require('../dist/core/coverage-router.js');
-              if (covMod.findCoverageReport && covMod.findCoverageReport()) {
-                coverageWeight = covMod.getCoverageRoutingWeight(args.file);
-              }
-            } catch (_) {}
-
-            try {
-              const ASTParserMod = require('../dist/core/ast-parser.js');
-              const ASTParserCls = ASTParserMod.ASTParser || ASTParserMod.default;
-              if (ASTParserCls) {
-                const parser = new ASTParserCls();
-                const code = require('fs').readFileSync(args.file, 'utf-8');
-                const ext = require('path').extname(args.file).slice(1);
-                const parsed = parser.parse(code, ext);
-                complexity = parser.calculateComplexity(parsed);
-              }
-            } catch (_) {}
-          }
-
-          let finalAgent = baseRoute.agent;
-          let adjustedConfidence = baseRoute.confidence;
-          const signals = [];
-
-          if (coverageWeight && coverageWeight.tester > 0.4) {
-            signals.push('low coverage detected');
-            if (coverageWeight.tester > adjustedConfidence * 0.5) {
-              finalAgent = 'tester';
-              adjustedConfidence = coverageWeight.tester;
-            }
-          }
-          if (complexity && complexity.cyclomatic > 15) {
-            signals.push('high complexity detected');
-            if (finalAgent === 'coder') {
-              finalAgent = 'reviewer';
-              adjustedConfidence = Math.max(adjustedConfidence, 0.7);
-            }
-          }
-
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                success: true,
-                agent: finalAgent,
-                confidence: adjustedConfidence,
-                reason: baseRoute.reason,
-                signals,
-                coverageWeight,
-                complexity
-              }, null, 2)
-            }]
-          };
+          const safeTask = sanitizeShellArg(args.task);
+          let cmd = `npx ruvector hooks route-enhanced "${safeTask}"`;
+          if (args.file) cmd += ` --file "${sanitizeShellArg(args.file)}"`;
+          const output = execSync(cmd, { encoding: 'utf-8', timeout: 30000 });
+          return { content: [{ type: 'text', text: output }] };
         } catch (e) {
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }] };
         }
@@ -3208,9 +3148,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // ── rvlite Query Tool Handlers ──────────────────────────────────────
       case 'rvlite_sql': {
         try {
-          let rvliteModule;
+          let rvlite;
           try {
-            rvliteModule = await import('rvlite');
+            rvlite = require('rvlite');
           } catch (_e) {
             return { content: [{ type: 'text', text: JSON.stringify({
               success: false,
@@ -3218,7 +3158,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               hint: 'Install with: npm install rvlite'
             }, null, 2) }] };
           }
-          const rvlite = rvliteModule.default || rvliteModule;
           const safeQuery = sanitizeShellArg(args.query);
           const dbOpts = args.db_path ? { path: validateRvfPath(args.db_path) } : {};
           const db = new rvlite.Database(dbOpts);
@@ -3239,9 +3178,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'rvlite_cypher': {
         try {
-          let rvliteModule;
+          let rvlite;
           try {
-            rvliteModule = await import('rvlite');
+            rvlite = require('rvlite');
           } catch (_e) {
             return { content: [{ type: 'text', text: JSON.stringify({
               success: false,
@@ -3249,7 +3188,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               hint: 'Install with: npm install rvlite'
             }, null, 2) }] };
           }
-          const rvlite = rvliteModule.default || rvliteModule;
           const safeQuery = sanitizeShellArg(args.query);
           const dbOpts = args.db_path ? { path: validateRvfPath(args.db_path) } : {};
           const db = new rvlite.Database(dbOpts);
@@ -3270,9 +3208,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'rvlite_sparql': {
         try {
-          let rvliteModule;
+          let rvlite;
           try {
-            rvliteModule = await import('rvlite');
+            rvlite = require('rvlite');
           } catch (_e) {
             return { content: [{ type: 'text', text: JSON.stringify({
               success: false,
@@ -3280,7 +3218,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               hint: 'Install with: npm install rvlite'
             }, null, 2) }] };
           }
-          const rvlite = rvliteModule.default || rvliteModule;
           const safeQuery = sanitizeShellArg(args.query);
           const dbOpts = args.db_path ? { path: validateRvfPath(args.db_path) } : {};
           const db = new rvlite.Database(dbOpts);
@@ -3310,7 +3247,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const results = await client.search(args.query, { limit: args.limit || 10, category: args.category });
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...results }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3327,7 +3264,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.share({ title: args.title, content: args.content, category: args.category || 'pattern', tags: args.tags });
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3344,7 +3281,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.get(args.id);
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3361,7 +3298,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.vote(args.id, args.direction);
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3378,7 +3315,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const results = await client.list({ category: args.category, limit: args.limit || 20 });
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...results }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3395,7 +3332,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.delete(args.id);
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3412,7 +3349,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.status();
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3429,7 +3366,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.drift({ domain: args.domain });
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3446,7 +3383,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.partition({ domain: args.domain, min_cluster_size: args.min_cluster_size || 3 });
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3463,7 +3400,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.transfer(args.source, args.target);
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3480,7 +3417,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const result = await client.sync({ direction: args.direction || 'both' });
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, ...result }, null, 2) }] };
         } catch (e) {
-          if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ERR_REQUIRE_ESM' || e.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+          if (e.code === 'MODULE_NOT_FOUND') {
             return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Brain tools require @ruvector/pi-brain', hint: 'npm install @ruvector/pi-brain' }, null, 2) }] };
           }
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: e.message }, null, 2) }], isError: true };
@@ -3840,15 +3777,6 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('RuVector MCP server running on stdio');
-
-  // Exit cleanly when the parent process closes the stdio pipe or sends a
-  // termination signal. Without these handlers, the MCP server can survive
-  // the parent's death (e.g. when the client is killed with SIGKILL) and
-  // accumulate as an orphaned process under PPID=1, consuming RSS for the
-  // lifetime of the user session.
-  process.stdin.on('end', () => process.exit(0));
-  process.on('SIGINT', () => process.exit(0));
-  process.on('SIGTERM', () => process.exit(0));
 }
 
 main().catch(console.error);

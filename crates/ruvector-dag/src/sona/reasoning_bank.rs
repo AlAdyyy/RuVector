@@ -81,8 +81,7 @@ impl DagReasoningBank {
             .filter(|(_, sim)| *sim >= self.config.similarity_threshold)
             .collect();
 
-        // Use unwrap_or to handle NaN similarity scores gracefully instead of panicking.
-        similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         similarities.truncate(k);
         similarities
     }
@@ -117,8 +116,7 @@ impl DagReasoningBank {
             .iter()
             .enumerate()
             .map(|(i, c)| (i, euclidean_distance(point, c)))
-            // Use unwrap_or to handle NaN distances gracefully instead of panicking.
-            .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
             .map(|(i, _)| i)
             .unwrap_or(0)
     }
@@ -166,10 +164,7 @@ impl DagReasoningBank {
             .min_by(|(_, a), (_, b)| {
                 let score_a = a.quality_score * (a.usage_count as f32 + 1.0).ln();
                 let score_b = b.quality_score * (b.usage_count as f32 + 1.0).ln();
-                // Use unwrap_or to handle NaN scores gracefully instead of panicking.
-                score_a
-                    .partial_cmp(&score_b)
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                score_a.partial_cmp(&score_b).unwrap()
             })
             .map(|(i, _)| i)
         {
@@ -230,8 +225,7 @@ fn kmeans_pp_init(patterns: &[DagPattern], k: usize) -> Vec<Vec<f32>> {
             let min_dist = centroids
                 .iter()
                 .map(|c| euclidean_distance(&pattern.vector, c))
-                // Use unwrap_or to handle NaN distances gracefully instead of panicking.
-                .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .min_by(|a, b| a.partial_cmp(b).unwrap())
                 .unwrap_or(0.0);
             let squared = min_dist * min_dist;
             distances.push(squared);

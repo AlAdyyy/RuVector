@@ -76,9 +76,10 @@ export class SlackAdapter extends BaseAdapter {
       const boltModule = await this.loadSlackBolt();
 
       if (boltModule) {
-        const AppCtor = (boltModule as { App: new (opts: unknown) => unknown })['App'];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const App = boltModule.App as any;
 
-        this.app = new AppCtor({
+        this.app = new App({
           token: credentials.token,
           signingSecret: credentials.signingSecret,
           socketMode: credentials.socketMode ?? false,
@@ -87,9 +88,10 @@ export class SlackAdapter extends BaseAdapter {
 
         // Register message handler
         const app = this.app as { message: (handler: (args: { message: SlackMessage }) => Promise<void>) => void };
-        app.message(async (args: { message: SlackMessage }) => {
-          const unified = this.slackToUnified(args.message);
-          await this.emitMessage(unified);
+        const self = this;
+        app.message(async function(args: { message: SlackMessage }) {
+          const unified = self.slackToUnified(args.message);
+          await self.emitMessage(unified);
         });
 
         // Start the app
@@ -139,7 +141,7 @@ export class SlackAdapter extends BaseAdapter {
       });
 
       this.status.messageCount++;
-      return result.ts;
+      return result.ts as string;
     } catch (error) {
       this.status.errorCount++;
       throw error;
@@ -164,10 +166,10 @@ export class SlackAdapter extends BaseAdapter {
   // Private Methods
   // ==========================================================================
 
-  private async loadSlackBolt(): Promise<{ App: new (opts: unknown) => unknown } | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async loadSlackBolt(): Promise<any | null> {
     try {
-      // @ts-expect-error optional peer dependency — may not be installed
-      return await import('@slack/bolt') as { App: new (opts: unknown) => unknown };
+      return await import('@slack/bolt');
     } catch {
       return null;
     }
@@ -180,7 +182,7 @@ export class SlackAdapter extends BaseAdapter {
     // Mock client for testing
     return {
       chat: {
-        postMessage: () => Promise.resolve({ ts: Date.now().toString() }),
+        postMessage: async () => ({ ts: Date.now().toString() }),
       },
     };
   }

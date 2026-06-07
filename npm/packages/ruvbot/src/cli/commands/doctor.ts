@@ -31,13 +31,13 @@ export function createDoctorCommand(): Command {
     .option('--fix', 'Attempt to fix issues automatically')
     .option('--json', 'Output results as JSON')
     .option('-v, --verbose', 'Show detailed information')
-    .action(async (options: { fix?: boolean; json?: boolean; verbose?: boolean }) => {
+    .action(async (options) => {
       const results: CheckResult[] = [];
       const spinner = ora('Running diagnostics...').start();
 
       try {
         // Check Node.js version
-        results.push(checkNodeVersion());
+        results.push(await checkNodeVersion());
 
         // Check environment variables
         results.push(...await checkEnvironment());
@@ -55,7 +55,7 @@ export function createDoctorCommand(): Command {
         results.push(await checkMemorySystem());
 
         // Check security configuration
-        results.push(checkSecurity());
+        results.push(await checkSecurity());
 
         // Check plugin system
         results.push(await checkPlugins());
@@ -120,7 +120,7 @@ export function createDoctorCommand(): Command {
   return doctor;
 }
 
-function checkNodeVersion(): CheckResult {
+async function checkNodeVersion(): Promise<CheckResult> {
   const version = process.version;
   const major = parseInt(version.slice(1).split('.')[0], 10);
 
@@ -179,8 +179,8 @@ async function checkDependencies(): Promise<CheckResult[]> {
   // Check if package.json exists
   const fs = await import('fs/promises');
   try {
-    const pkg = JSON.parse(await fs.readFile('package.json', 'utf-8')) as { dependencies?: Record<string, unknown>; devDependencies?: Record<string, unknown> };
-    const hasRuvbot = pkg.dependencies?.['@ruvector/ruvbot'] ?? pkg.devDependencies?.['@ruvector/ruvbot'];
+    const pkg = JSON.parse(await fs.readFile('package.json', 'utf-8'));
+    const hasRuvbot = pkg.dependencies?.['@ruvector/ruvbot'] || pkg.devDependencies?.['@ruvector/ruvbot'];
 
     if (hasRuvbot) {
       results.push({ name: 'RuvBot Package', status: 'pass', message: '@ruvector/ruvbot installed' });
@@ -249,11 +249,11 @@ async function checkDatabase(): Promise<CheckResult> {
       await client.query('SELECT 1');
       await client.end();
       return { name: 'Database (PostgreSQL)', status: 'pass', message: 'Connection successful' };
-    } catch (error: unknown) {
+    } catch (error: any) {
       return {
         name: 'Database (PostgreSQL)',
         status: 'fail',
-        message: `Connection failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Connection failed: ${error.message}`,
         fix: 'Check DATABASE_URL and ensure PostgreSQL is running',
       };
     }
@@ -295,11 +295,11 @@ async function checkLLMProviders(): Promise<CheckResult[]> {
       } else {
         results.push({ name: 'Anthropic API', status: 'warn', message: `Status: ${response.status}` });
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       results.push({
         name: 'Anthropic API',
         status: 'fail',
-        message: `Connection failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Connection failed: ${error.message}`,
         fix: 'Check network connectivity',
       });
     }
@@ -322,11 +322,11 @@ async function checkLLMProviders(): Promise<CheckResult[]> {
           fix: 'Check OPENROUTER_API_KEY in .env',
         });
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       results.push({
         name: 'OpenRouter API',
         status: 'fail',
-        message: `Connection failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Connection failed: ${error.message}`,
       });
     }
   }
@@ -366,7 +366,7 @@ async function checkMemorySystem(): Promise<CheckResult> {
   return { name: 'Memory System', status: 'pass', message: 'Ready' };
 }
 
-function checkSecurity(): CheckResult {
+async function checkSecurity(): Promise<CheckResult> {
   const aidefenceEnabled = process.env.RUVBOT_AIDEFENCE_ENABLED !== 'false';
   const piiEnabled = process.env.RUVBOT_PII_DETECTION !== 'false';
   const auditEnabled = process.env.RUVBOT_AUDIT_LOG !== 'false';
@@ -421,6 +421,7 @@ async function checkPlugins(): Promise<CheckResult> {
 
 async function checkDiskSpace(): Promise<CheckResult> {
   try {
+    const os = await import('os');
     const { execSync } = await import('child_process');
 
     // Get disk space (works on Unix-like systems)

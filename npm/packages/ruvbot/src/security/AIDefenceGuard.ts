@@ -206,7 +206,6 @@ const PII_PATTERNS = [
 /**
  * Control characters that should be sanitized
  */
-// eslint-disable-next-line no-control-regex
 const CONTROL_CHAR_PATTERN = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 
 /**
@@ -373,7 +372,7 @@ export class AIDefenceGuard {
   /**
    * Validate LLM response for safety
    */
-  async validateResponse(response: string, _originalInput: string): Promise<DetectionResult> {
+  async validateResponse(response: string, originalInput: string): Promise<DetectionResult> {
     const threats: ThreatInfo[] = [];
     const startTime = performance.now();
 
@@ -471,6 +470,7 @@ export class AIDefenceGuard {
 
   private detectInjection(input: string): ThreatInfo[] {
     const threats: ThreatInfo[] = [];
+    const lowerInput = input.toLowerCase();
 
     for (const pattern of INJECTION_PATTERNS) {
       const match = pattern.exec(input);
@@ -579,7 +579,7 @@ export class AIDefenceGuard {
     return threats;
   }
 
-  private analyzeBehavior(input: string, userId: string): Promise<ThreatInfo[]> {
+  private async analyzeBehavior(input: string, userId: string): Promise<ThreatInfo[]> {
     const threats: ThreatInfo[] = [];
 
     // Simple behavioral features
@@ -618,7 +618,7 @@ export class AIDefenceGuard {
       this.behaviorBaseline.set(userId, features);
     }
 
-    return Promise.resolve(threats);
+    return threats;
   }
 
   private getMaxSeverity(threats: ThreatInfo[]): ThreatLevel {

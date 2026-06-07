@@ -3,6 +3,7 @@
  */
 
 import { z } from 'zod';
+import type { LLMProvider, MemoryConfig, Platform } from './types.js';
 
 // ============================================================================
 // Configuration Schema

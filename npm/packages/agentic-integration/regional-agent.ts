@@ -47,15 +47,9 @@ export interface QueryResult {
   region: string;
 }
 
-export interface VectorEntry {
-  id: string;
-  vector: number[];
-  metadata?: Record<string, unknown>;
-}
-
 export interface SyncPayload {
   type: 'index' | 'update' | 'delete';
-  data: VectorEntry[] | string[];
+  data: any;
   timestamp: number;
   sourceRegion: string;
 }
@@ -66,7 +60,7 @@ export class RegionalAgent extends EventEmitter {
   private totalLatency = 0;
   private metricsTimer?: NodeJS.Timeout;
   private syncTimer?: NodeJS.Timeout;
-  private localIndex: Map<string, { vector: number[]; metadata?: Record<string, unknown> }> = new Map();
+  private localIndex: Map<string, any> = new Map();
   private syncQueue: SyncPayload[] = [];
   private rateLimiter: RateLimiter;
 
@@ -76,7 +70,7 @@ export class RegionalAgent extends EventEmitter {
       maxRequests: config.maxConcurrentStreams,
       windowMs: 1000,
     });
-    void this.initialize();
+    this.initialize();
   }
 
   /**
@@ -126,7 +120,7 @@ export class RegionalAgent extends EventEmitter {
   /**
    * Load local index from persistent storage
    */
-  private loadLocalIndex(): Promise<void> {
+  private async loadLocalIndex(): Promise<void> {
     try {
       // Placeholder for actual storage loading
       // In production, this would load from disk/database
@@ -136,17 +130,16 @@ export class RegionalAgent extends EventEmitter {
       this.localIndex.clear();
 
       console.log(`[RegionalAgent:${this.config.region}] Local index loaded: ${this.localIndex.size} vectors`);
-      return Promise.resolve();
     } catch (error) {
       console.error(`[RegionalAgent:${this.config.region}] Error loading local index:`, error);
-      return Promise.reject(error as Error);
+      throw error;
     }
   }
 
   /**
    * Register with coordinator
    */
-  private registerWithCoordinator(): Promise<void> {
+  private async registerWithCoordinator(): Promise<void> {
     try {
       console.log(`[RegionalAgent:${this.config.region}] Registering with coordinator at ${this.config.coordinatorEndpoint}`);
 
@@ -162,10 +155,9 @@ export class RegionalAgent extends EventEmitter {
       });
 
       console.log(`[RegionalAgent:${this.config.region}] Successfully registered with coordinator`);
-      return Promise.resolve();
     } catch (error) {
       console.error(`[RegionalAgent:${this.config.region}] Failed to register with coordinator:`, error);
-      return Promise.reject(error as Error);
+      throw error;
     }
   }
 
@@ -255,31 +247,31 @@ export class RegionalAgent extends EventEmitter {
   /**
    * Search vectors in local index
    */
-  private searchVectors(request: QueryRequest): Promise<QueryResult['matches']> {
+  private async searchVectors(request: QueryRequest): Promise<QueryResult['matches']> {
     // Placeholder for actual vector search
     // In production, this would use FAISS, Annoy, or similar library
 
     const matches: QueryResult['matches'] = [];
 
     // Simulate vector search
-    for (const [id, entry] of this.localIndex.entries()) {
-      const score = this.calculateSimilarity(request.vector, entry.vector);
+    for (const [id, vector] of this.localIndex.entries()) {
+      const score = this.calculateSimilarity(request.vector, vector);
 
       // Apply filters if present
-      if (request.filters && !this.matchesFilters(entry.metadata ?? {}, request.filters)) {
+      if (request.filters && !this.matchesFilters(vector.metadata, request.filters)) {
         continue;
       }
 
       matches.push({
         id,
         score,
-        metadata: entry.metadata ?? {},
+        metadata: vector.metadata || {},
       });
     }
 
     // Sort by score and return top-k
     matches.sort((a, b) => b.score - a.score);
-    return Promise.resolve(matches.slice(0, request.topK));
+    return matches.slice(0, request.topK);
   }
 
   /**
@@ -314,7 +306,7 @@ export class RegionalAgent extends EventEmitter {
   /**
    * Add/update vectors in local index
    */
-  async indexVectors(vectors: VectorEntry[]): Promise<void> {
+  async indexVectors(vectors: Array<{ id: string; vector: number[]; metadata?: Record<string, any> }>): Promise<void> {
     console.log(`[RegionalAgent:${this.config.region}] Indexing ${vectors.length} vectors`);
 
     for (const { id, vector, metadata } of vectors) {
@@ -345,7 +337,7 @@ export class RegionalAgent extends EventEmitter {
   /**
    * Delete vectors from local index
    */
-  deleteVectors(ids: string[]): Promise<void> {
+  async deleteVectors(ids: string[]): Promise<void> {
     console.log(`[RegionalAgent:${this.config.region}] Deleting ${ids.length} vectors`);
 
     for (const id of ids) {
@@ -361,7 +353,6 @@ export class RegionalAgent extends EventEmitter {
     });
 
     this.emit('vectors:deleted', { count: ids.length });
-    return Promise.resolve();
   }
 
   /**
@@ -380,13 +371,13 @@ export class RegionalAgent extends EventEmitter {
     try {
       switch (payload.type) {
         case 'index':
-          await this.indexVectors(payload.data as VectorEntry[]);
+          await this.indexVectors(payload.data);
           break;
         case 'update':
-          await this.indexVectors(payload.data as VectorEntry[]);
+          await this.indexVectors(payload.data);
           break;
         case 'delete':
-          await this.deleteVectors(payload.data as string[]);
+          await this.deleteVectors(payload.data);
           break;
       }
 
@@ -479,7 +470,7 @@ export class RegionalAgent extends EventEmitter {
   /**
    * Process sync queue (send to other regions)
    */
-  private processSyncQueue(): void {
+  private async processSyncQueue(): Promise<void> {
     if (this.syncQueue.length === 0) return;
 
     const batch = this.syncQueue.splice(0, 100); // Process in batches
@@ -529,7 +520,7 @@ export class RegionalAgent extends EventEmitter {
     }
 
     // Process remaining sync queue
-    this.processSyncQueue();
+    await this.processSyncQueue();
 
     // Save local index
     await this.saveLocalIndex();
@@ -556,7 +547,7 @@ export class RegionalAgent extends EventEmitter {
   /**
    * Save local index to persistent storage
    */
-  private saveLocalIndex(): Promise<void> {
+  private async saveLocalIndex(): Promise<void> {
     try {
       console.log(`[RegionalAgent:${this.config.region}] Saving local index to ${this.config.localStoragePath}`);
 
@@ -564,10 +555,9 @@ export class RegionalAgent extends EventEmitter {
       // In production, this would write to disk/database
 
       console.log(`[RegionalAgent:${this.config.region}] Local index saved: ${this.localIndex.size} vectors`);
-      return Promise.resolve();
     } catch (error) {
       console.error(`[RegionalAgent:${this.config.region}] Error saving local index:`, error);
-      return Promise.reject(error as Error);
+      throw error;
     }
   }
 }

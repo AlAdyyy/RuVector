@@ -21,13 +21,13 @@ export function createPluginsCommand(): Command {
     .command('list')
     .description('List installed plugins')
     .option('--json', 'Output as JSON')
-    .action(async (options: { json?: boolean }) => {
+    .action(async (options) => {
       try {
         const fs = await import('fs/promises');
         const path = await import('path');
         const pluginsDir = process.env.RUVBOT_PLUGINS_DIR || './plugins';
 
-        const pluginList: Array<{ name: string; version: string; description: string; enabled: boolean }> = [];
+        let pluginList: Array<{ name: string; version: string; description: string; enabled: boolean }> = [];
 
         try {
           const files = await fs.readdir(pluginsDir);
@@ -40,12 +40,12 @@ export function createPluginsCommand(): Command {
               try {
                 const manifestPath = path.join(pluginPath, 'plugin.json');
                 const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-                const manifest = JSON.parse(manifestContent) as { name?: string; version?: string; description?: string };
+                const manifest = JSON.parse(manifestContent);
 
                 pluginList.push({
-                  name: manifest.name ?? file,
-                  version: manifest.version ?? '0.0.0',
-                  description: manifest.description ?? 'No description',
+                  name: manifest.name || file,
+                  version: manifest.version || '0.0.0',
+                  description: manifest.description || 'No description',
                   enabled: true, // Would need state tracking for real enabled/disabled
                 });
               } catch {
@@ -80,8 +80,8 @@ export function createPluginsCommand(): Command {
         }
 
         console.log('─'.repeat(60));
-      } catch (error: unknown) {
-        console.error(chalk.red(`Failed to list plugins: ${error instanceof Error ? error.message : String(error)}`));
+      } catch (error: any) {
+        console.error(chalk.red(`Failed to list plugins: ${error.message}`));
         process.exit(1);
       }
     });
@@ -93,7 +93,7 @@ export function createPluginsCommand(): Command {
     .argument('<name>', 'Plugin name')
     .option('-d, --dir <directory>', 'Target directory', './plugins')
     .option('--typescript', 'Use TypeScript')
-    .action(async (name: string, options: { dir: string; typescript?: boolean }) => {
+    .action(async (name, options) => {
       const spinner = ora(`Creating plugin ${name}...`).start();
 
       try {
@@ -236,8 +236,8 @@ export async function shutdown(context) {
           console.log('  npm run build');
         }
         console.log(chalk.gray('\nThe plugin will be auto-loaded when RuvBot starts.'));
-      } catch (error: unknown) {
-        spinner.fail(chalk.red(`Create failed: ${error instanceof Error ? error.message : String(error)}`));
+      } catch (error: any) {
+        spinner.fail(chalk.red(`Create failed: ${error.message}`));
         process.exit(1);
       }
     });
@@ -246,7 +246,7 @@ export async function shutdown(context) {
   plugins
     .command('info')
     .description('Show plugin system information')
-    .action(() => {
+    .action(async () => {
       console.log(chalk.bold('\n🔌 RuvBot Plugin System\n'));
       console.log('─'.repeat(50));
       console.log(chalk.cyan('Features:'));
@@ -288,7 +288,7 @@ export async function shutdown(context) {
     .command('validate')
     .description('Validate a plugin manifest')
     .argument('<path>', 'Path to plugin or plugin.json')
-    .action(async (pluginPath: string) => {
+    .action(async (pluginPath) => {
       try {
         const fs = await import('fs/promises');
         const path = await import('path');
@@ -301,7 +301,7 @@ export async function shutdown(context) {
         }
 
         const content = await fs.readFile(manifestPath, 'utf-8');
-        const manifest: unknown = JSON.parse(content);
+        const manifest = JSON.parse(content);
 
         const result = PluginManifestSchema.safeParse(manifest);
 
@@ -323,8 +323,8 @@ export async function shutdown(context) {
           }
           process.exit(1);
         }
-      } catch (error: unknown) {
-        console.error(chalk.red(`Validation failed: ${error instanceof Error ? error.message : String(error)}`));
+      } catch (error: any) {
+        console.error(chalk.red(`Validation failed: ${error.message}`));
         process.exit(1);
       }
     });

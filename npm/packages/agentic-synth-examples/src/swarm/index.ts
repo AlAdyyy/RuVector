@@ -138,11 +138,9 @@ export interface SwarmStatistics {
  * await swarm.sharePattern('high-quality-names', 0.95);
  * ```
  */
-type ResolvedSwarmConfig = SwarmConfig & Required<Pick<SwarmConfig, 'agentCount' | 'memorySize'>>;
-
 export class SwarmCoordinator extends EventEmitter {
   private synth: AgenticSynth;
-  private config: ResolvedSwarmConfig;
+  private config: SwarmConfig;
   private agents: Map<string, Agent> = new Map();
   private tasks: CoordinationTask[] = [];
   private learningPatterns: DistributedLearningPattern[] = [];
@@ -282,7 +280,7 @@ export class SwarmCoordinator extends EventEmitter {
 
       this.emit('coordination:complete', {
         taskId: task.id,
-        duration: (task.endTime?.getTime() ?? 0) - (task.startTime?.getTime() ?? 0),
+        duration: task.endTime.getTime() - task.startTime.getTime(),
         resultCount: result.data.length
       });
 

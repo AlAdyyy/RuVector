@@ -198,7 +198,7 @@ export interface UnifiedStats {
  * @param config Optional configuration
  * @returns Unified engine instance
  */
-export function createUnifiedEngine(
+export async function createUnifiedEngine(
   config?: UnifiedConfig & ModuleConfig
 ): Promise<UnifiedEngine> {
   const startTime = Date.now();
@@ -211,10 +211,10 @@ export function createUnifiedEngine(
   const exotic = createExoticEngine(config?.exotic);
 
   // Track operation counts
-  const attentionOps = 0;
-  const transactionCount = 0;
+  let attentionOps = 0;
+  let transactionCount = 0;
 
-  return Promise.resolve({
+  return {
     attention,
     learning,
     nervous,
@@ -254,13 +254,12 @@ export function createUnifiedEngine(
       },
     }),
 
-    init: () => {
+    init: async () => {
       // WASM initialization would happen here
       // await wasmModule.init();
       if (config?.logLevel === 'debug') {
         console.log('[ruvector-wasm-unified] Initialized');
       }
-      return Promise.resolve();
     },
 
     dispose: () => {
@@ -270,7 +269,7 @@ export function createUnifiedEngine(
         console.log('[ruvector-wasm-unified] Disposed');
       }
     },
-  });
+  };
 }
 
 // ============================================================================

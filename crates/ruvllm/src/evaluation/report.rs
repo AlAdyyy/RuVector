@@ -73,12 +73,8 @@ impl EvalReport {
             })
             .collect();
 
-        // Sort by success rate (descending). Use unwrap_or to handle NaN gracefully.
-        entries.sort_by(|a, b| {
-            b.success_rate
-                .partial_cmp(&a.success_rate)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        // Sort by success rate (descending)
+        entries.sort_by(|a, b| b.success_rate.partial_cmp(&a.success_rate).unwrap());
 
         // Assign ranks
         for (i, entry) in entries.iter_mut().enumerate() {

@@ -133,7 +133,7 @@ export class JsonStorage implements StorageBackend {
   private load(): JsonData {
     try {
       if (fs.existsSync(JSON_PATH)) {
-        return JSON.parse(fs.readFileSync(JSON_PATH, 'utf-8')) as JsonData;
+        return JSON.parse(fs.readFileSync(JSON_PATH, 'utf-8'));
       }
     } catch {}
     return {
@@ -167,20 +167,19 @@ export class JsonStorage implements StorageBackend {
     return Math.floor(Date.now() / 1000);
   }
 
-  connect(): Promise<void> {
-    return Promise.resolve();
+  async connect(): Promise<void> {
+    // JSON storage is always available
   }
 
-  disconnect(): Promise<void> {
+  async disconnect(): Promise<void> {
     this.save();
-    return Promise.resolve();
   }
 
   isConnected(): boolean {
     return true;
   }
 
-  updateQ(state: string, action: string, reward: number): Promise<void> {
+  async updateQ(state: string, action: string, reward: number): Promise<void> {
     const key = `${state}|${action}`;
     if (!this.data.patterns[key]) {
       this.data.patterns[key] = { state, action, q_value: 0, visits: 0, last_update: 0 };
@@ -191,12 +190,11 @@ export class JsonStorage implements StorageBackend {
     p.last_update = this.now();
     this.data.stats.total_patterns = Object.keys(this.data.patterns).length;
     this.save();
-    return Promise.resolve();
   }
 
-  getQ(state: string, action: string): Promise<number> {
+  async getQ(state: string, action: string): Promise<number> {
     const key = `${state}|${action}`;
-    return Promise.resolve(this.data.patterns[key]?.q_value ?? 0);
+    return this.data.patterns[key]?.q_value ?? 0;
   }
 
   async getBestAction(state: string, actions: string[]): Promise<{ action: string; confidence: number }> {
@@ -212,7 +210,7 @@ export class JsonStorage implements StorageBackend {
     return { action: bestAction, confidence: bestQ > 0 ? Math.min(bestQ, 1) : 0 };
   }
 
-  remember(type: string, content: string, embedding: number[], metadata: Record<string, string>): Promise<string> {
+  async remember(type: string, content: string, embedding: number[], metadata: Record<string, string>): Promise<string> {
     const id = `mem_${this.now()}`;
     this.data.memories.push({
       id,
@@ -227,10 +225,10 @@ export class JsonStorage implements StorageBackend {
     }
     this.data.stats.total_memories = this.data.memories.length;
     this.save();
-    return Promise.resolve(id);
+    return id;
   }
 
-  recall(queryEmbedding: number[], topK: number): Promise<MemoryEntry[]> {
+  async recall(queryEmbedding: number[], topK: number): Promise<MemoryEntry[]> {
     const similarity = (a: number[], b: number[]): number => {
       if (a.length !== b.length) return 0;
       const dot = a.reduce((sum, v, i) => sum + v * b[i], 0);
@@ -239,12 +237,12 @@ export class JsonStorage implements StorageBackend {
       return normA > 0 && normB > 0 ? dot / (normA * normB) : 0;
     };
 
-    return Promise.resolve(this.data.memories
+    return this.data.memories
       .filter(m => m.embedding && m.embedding.length > 0)
       .map(m => ({ score: similarity(queryEmbedding, m.embedding), memory: m }))
       .sort((a, b) => b.score - a.score)
       .slice(0, topK)
-      .map(r => r.memory));
+      .map(r => r.memory);
   }
 
   async recordTrajectory(state: string, action: string, outcome: string, reward: number): Promise<string> {
@@ -259,21 +257,20 @@ export class JsonStorage implements StorageBackend {
     return id;
   }
 
-  recordError(code: string, errorType: string, message: string): Promise<void> {
+  async recordError(code: string, errorType: string, message: string): Promise<void> {
     if (!this.data.errors[code]) {
       this.data.errors[code] = { code, error_type: errorType, message, fixes: [], occurrences: 0 };
     }
     this.data.errors[code].occurrences++;
     this.data.stats.total_errors = Object.keys(this.data.errors).length;
     this.save();
-    return Promise.resolve();
   }
 
-  getErrorFixes(code: string): Promise<ErrorPattern | null> {
-    return Promise.resolve(this.data.errors[code] ?? null);
+  async getErrorFixes(code: string): Promise<ErrorPattern | null> {
+    return this.data.errors[code] ?? null;
   }
 
-  recordSequence(fromFile: string, toFile: string): Promise<void> {
+  async recordSequence(fromFile: string, toFile: string): Promise<void> {
     const existing = this.data.file_sequences.find(
       s => s.from_file === fromFile && s.to_file === toFile
     );
@@ -283,18 +280,17 @@ export class JsonStorage implements StorageBackend {
       this.data.file_sequences.push({ from_file: fromFile, to_file: toFile, count: 1 });
     }
     this.save();
-    return Promise.resolve();
   }
 
-  getNextFiles(file: string, limit: number): Promise<Array<{ file: string; count: number }>> {
-    return Promise.resolve(this.data.file_sequences
+  async getNextFiles(file: string, limit: number): Promise<Array<{ file: string; count: number }>> {
+    return this.data.file_sequences
       .filter(s => s.from_file === file)
       .sort((a, b) => b.count - a.count)
       .slice(0, limit)
-      .map(s => ({ file: s.to_file, count: s.count })));
+      .map(s => ({ file: s.to_file, count: s.count }));
   }
 
-  registerAgent(id: string, type: string, capabilities: string[]): Promise<void> {
+  async registerAgent(id: string, type: string, capabilities: string[]): Promise<void> {
     this.data.agents[id] = {
       id,
       agent_type: type,
@@ -304,10 +300,9 @@ export class JsonStorage implements StorageBackend {
       status: 'active'
     };
     this.save();
-    return Promise.resolve();
   }
 
-  coordinateAgents(source: string, target: string, weight: number): Promise<void> {
+  async coordinateAgents(source: string, target: string, weight: number): Promise<void> {
     const existing = this.data.edges.find(e => e.source === source && e.target === target);
     if (existing) {
       existing.weight = (existing.weight + weight) / 2;
@@ -316,27 +311,25 @@ export class JsonStorage implements StorageBackend {
       this.data.edges.push({ source, target, weight, coordination_count: 1 });
     }
     this.save();
-    return Promise.resolve();
   }
 
-  getSwarmStats(): Promise<{ agents: number; edges: number; avgSuccess: number }> {
+  async getSwarmStats(): Promise<{ agents: number; edges: number; avgSuccess: number }> {
     const agents = Object.keys(this.data.agents).length;
     const edges = this.data.edges.length;
     const avgSuccess = agents > 0
       ? Object.values(this.data.agents).reduce((sum, a) => sum + a.success_rate, 0) / agents
       : 0;
-    return Promise.resolve({ agents, edges, avgSuccess });
+    return { agents, edges, avgSuccess };
   }
 
-  sessionStart(): Promise<void> {
+  async sessionStart(): Promise<void> {
     this.data.stats.session_count++;
     this.data.stats.last_session = this.now();
     this.save();
-    return Promise.resolve();
   }
 
-  getStats(): Promise<IntelligenceStats> {
-    return Promise.resolve(this.data.stats);
+  async getStats(): Promise<IntelligenceStats> {
+    return this.data.stats;
   }
 }
 
@@ -344,19 +337,8 @@ export class JsonStorage implements StorageBackend {
 // PostgreSQL Storage Backend
 // ============================================================================
 
-interface PgClient {
-  query(sql: string, params?: unknown[]): Promise<{ rows: unknown[] }>;
-  release(): void;
-}
-
-interface PgPool {
-  connect(): Promise<PgClient>;
-  query(sql: string, params?: unknown[]): Promise<{ rows: unknown[] }>;
-  end(): Promise<void>;
-}
-
 export class PostgresStorage implements StorageBackend {
-  private pool: PgPool | null = null;
+  private pool: any = null;
   private connectionString: string;
   private connected = false;
 
@@ -370,7 +352,7 @@ export class PostgresStorage implements StorageBackend {
   async connect(): Promise<void> {
     try {
       // Dynamic import of pg to avoid bundling issues
-      const pg = await import('pg') as { Pool: new (opts: { connectionString: string }) => PgPool };
+      const pg = await import('pg');
       this.pool = new pg.Pool({ connectionString: this.connectionString });
 
       // Test connection
@@ -399,10 +381,10 @@ export class PostgresStorage implements StorageBackend {
     return this.connected && this.pool !== null;
   }
 
-  private async query<T>(sql: string, params?: unknown[]): Promise<T[]> {
+  private async query<T = any>(sql: string, params?: any[]): Promise<T[]> {
     if (!this.pool) throw new Error('Not connected');
     const result = await this.pool.query(sql, params);
-    return result.rows as T[];
+    return result.rows;
   }
 
   private async initSchema(): Promise<void> {
@@ -557,7 +539,7 @@ export class PostgresStorage implements StorageBackend {
       memory_type: string;
       content: string;
       embedding: number[];
-      metadata: Record<string, string> | null;
+      metadata: any;
       created_at: Date;
     }>(`
       SELECT id, memory_type, content, embedding, metadata,
@@ -585,7 +567,7 @@ export class PostgresStorage implements StorageBackend {
           memory_type: r.memory_type,
           content: r.content,
           embedding: r.embedding,
-          metadata: r.metadata ?? {},
+          metadata: r.metadata || {},
           timestamp: Math.floor(new Date(r.created_at).getTime() / 1000)
         }
       }))

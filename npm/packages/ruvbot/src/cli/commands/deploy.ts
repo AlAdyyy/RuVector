@@ -7,7 +7,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 
 export function createDeploymentCommand(): Command {
   const deploy = new Command('deploy-cloud')
@@ -27,7 +27,7 @@ export function createDeploymentCommand(): Command {
     .option('--max-instances <n>', 'Maximum instances', '10')
     .option('--env-file <path>', 'Path to .env file')
     .option('--yes', 'Skip confirmation prompts')
-    .action(async (options: Record<string, unknown>) => {
+    .action(async (options) => {
       await deployToCloudRun(options);
     });
 
@@ -39,7 +39,7 @@ export function createDeploymentCommand(): Command {
     .option('--port <port>', 'Host port', '3000')
     .option('--detach', 'Run in background', true)
     .option('--env-file <path>', 'Path to .env file')
-    .action(async (options: Record<string, unknown>) => {
+    .action(async (options) => {
       await deployToDocker(options);
     });
 
@@ -51,7 +51,7 @@ export function createDeploymentCommand(): Command {
     .option('--namespace <ns>', 'Kubernetes namespace', 'default')
     .option('--replicas <n>', 'Number of replicas', '2')
     .option('--env-file <path>', 'Path to .env file')
-    .action(async (options: Record<string, unknown>) => {
+    .action(async (options) => {
       await deployToK8s(options);
     });
 
@@ -59,8 +59,8 @@ export function createDeploymentCommand(): Command {
   deploy
     .command('wizard')
     .description('Interactive deployment wizard')
-    .action(() => {
-      runDeploymentWizard();
+    .action(async () => {
+      await runDeploymentWizard();
     });
 
   // Status check
@@ -68,8 +68,8 @@ export function createDeploymentCommand(): Command {
     .command('status')
     .description('Check deployment status')
     .option('--platform <platform>', 'Platform: cloudrun, docker, k8s')
-    .action((options: Record<string, unknown>) => {
-      checkDeploymentStatus(options);
+    .action(async (options) => {
+      await checkDeploymentStatus(options);
     });
 
   return deploy;
@@ -119,8 +119,8 @@ async function deployToCloudRun(options: Record<string, unknown>): Promise<void>
     }
 
     console.log(chalk.cyan(`  Project: ${projectId}`));
-    console.log(chalk.cyan(`  Region:  ${String(options.region)}`));
-    console.log(chalk.cyan(`  Service: ${String(options.service)}`));
+    console.log(chalk.cyan(`  Region:  ${options.region}`));
+    console.log(chalk.cyan(`  Service: ${options.service}`));
 
     // Enable APIs
     spinner.start('Enabling required APIs...');
@@ -144,8 +144,10 @@ async function deployToCloudRun(options: Record<string, unknown>): Promise<void>
 
     // Check for Dockerfile
     const fs = await import('fs/promises');
+    let hasDockerfile = false;
     try {
       await fs.access('Dockerfile');
+      hasDockerfile = true;
     } catch {
       // Create Dockerfile
       spinner.start('Creating Dockerfile...');
@@ -169,15 +171,15 @@ CMD ["ruvbot", "start", "--port", "8080"]
 
     const deployCmd = [
       'gcloud run deploy',
-      String(options.service),
+      options.service,
       '--source .',
       '--platform managed',
-      `--region ${String(options.region)}`,
+      `--region ${options.region}`,
       '--allow-unauthenticated',
       '--port 8080',
-      `--memory ${String(options.memory)}`,
-      `--min-instances ${String(options.minInstances)}`,
-      `--max-instances ${String(options.maxInstances)}`,
+      `--memory ${options.memory}`,
+      `--min-instances ${options.minInstances}`,
+      `--max-instances ${options.maxInstances}`,
       envVars,
       '--quiet',
     ]
@@ -188,7 +190,7 @@ CMD ["ruvbot", "start", "--port", "8080"]
 
     // Get URL
     const serviceUrl = execSync(
-      `gcloud run services describe ${String(options.service)} --region ${String(options.region)} --format='value(status.url)'`,
+      `gcloud run services describe ${options.service} --region ${options.region} --format='value(status.url)'`,
       { encoding: 'utf-8' }
     ).trim();
 
@@ -221,17 +223,17 @@ async function deployToDocker(options: Record<string, unknown>): Promise<void> {
   const spinner = ora('Creating docker-compose.yml...').start();
 
   try {
-    const envFileMapping = options.envFile ? `env_file:\n      - ${String(options.envFile)}` : '';
+    const envFileMapping = options.envFile ? `env_file:\n      - ${options.envFile}` : '';
 
     const composeContent = `version: '3.8'
 services:
   ruvbot:
     image: node:20-slim
-    container_name: ${String(options.name)}
+    container_name: ${options.name}
     working_dir: /app
     command: sh -c "npm install -g ruvbot && ruvbot start --port 3000"
     ports:
-      - "${String(options.port)}:3000"
+      - "${options.port}:3000"
     ${envFileMapping}
     environment:
       - OPENROUTER_API_KEY=\${OPENROUTER_API_KEY}
@@ -270,8 +272,8 @@ services:
       console.log('\n' + chalk.green('═'.repeat(50)));
       console.log(chalk.bold.green('🚀 RuvBot is running!'));
       console.log(chalk.green('═'.repeat(50)));
-      console.log(`\n  URL:      ${chalk.cyan(`http://localhost:${String(options.port)}`)}`);
-      console.log(`  Health:   ${chalk.cyan(`http://localhost:${String(options.port)}/health`)}`);
+      console.log(`\n  URL:      ${chalk.cyan(`http://localhost:${options.port}`)}`);
+      console.log(`  Health:   ${chalk.cyan(`http://localhost:${options.port}/health`)}`);
       console.log(`\n  Logs:     ${chalk.gray('docker-compose logs -f')}`);
       console.log(`  Stop:     ${chalk.gray('docker-compose down')}`);
       console.log();
@@ -306,9 +308,9 @@ async function deployToK8s(options: Record<string, unknown>): Promise<void> {
 kind: Deployment
 metadata:
   name: ruvbot
-  namespace: ${String(options.namespace)}
+  namespace: ${options.namespace}
 spec:
-  replicas: ${String(options.replicas)}
+  replicas: ${options.replicas}
   selector:
     matchLabels:
       app: ruvbot
@@ -350,7 +352,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ruvbot
-  namespace: ${String(options.namespace)}
+  namespace: ${options.namespace}
 spec:
   selector:
     app: ruvbot
@@ -367,7 +369,7 @@ spec:
 kind: Secret
 metadata:
   name: ruvbot-secrets
-  namespace: ${String(options.namespace)}
+  namespace: ${options.namespace}
 type: Opaque
 stringData:
   OPENROUTER_API_KEY: "YOUR_API_KEY"
@@ -393,7 +395,7 @@ stringData:
   }
 }
 
-function runDeploymentWizard(): void {
+async function runDeploymentWizard(): Promise<void> {
   console.log(chalk.bold('\n🧙 RuvBot Deployment Wizard\n'));
   console.log('═'.repeat(50));
 
@@ -414,7 +416,7 @@ function runDeploymentWizard(): void {
   console.log();
 }
 
-function checkDeploymentStatus(options: Record<string, unknown>): void {
+async function checkDeploymentStatus(options: Record<string, unknown>): Promise<void> {
   const platform = options.platform as string;
 
   console.log(chalk.bold('\n📊 Deployment Status\n'));

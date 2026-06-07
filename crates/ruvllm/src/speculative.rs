@@ -1241,8 +1241,7 @@ pub fn top_k_filter(logits: &mut [f32], k: usize) {
     }
 
     let mut indexed: Vec<(usize, f32)> = logits.iter().cloned().enumerate().collect();
-    // Use unwrap_or to handle NaN gracefully instead of panicking.
-    indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let threshold = indexed[k - 1].1;
     for logit in logits.iter_mut() {
@@ -1260,8 +1259,7 @@ pub fn top_p_filter(logits: &mut [f32], p: f32) {
 
     let probs = softmax(logits);
     let mut indexed: Vec<(usize, f32)> = probs.iter().cloned().enumerate().collect();
-    // Use unwrap_or to handle NaN gracefully instead of panicking.
-    indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let mut cumsum = 0.0;
     let mut cutoff_idx = indexed.len();

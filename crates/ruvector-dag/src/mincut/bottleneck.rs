@@ -41,12 +41,7 @@ impl BottleneckAnalysis {
         }
 
         // Sort by score descending
-        // Use unwrap_or to handle NaN scores gracefully instead of panicking.
-        bottlenecks.sort_by(|a, b| {
-            b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        bottlenecks.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
 
         // Calculate total cost by iterating over all node IDs
         let total_cost: f64 = (0..dag.node_count())
@@ -93,8 +88,7 @@ impl BottleneckAnalysis {
                 .parents(node_id)
                 .iter()
                 .filter_map(|&p| max_cost.get(&p))
-                // Use unwrap_or to handle NaN costs gracefully instead of panicking.
-                .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
                 .copied()
                 .unwrap_or(0.0);
 
@@ -103,8 +97,7 @@ impl BottleneckAnalysis {
 
         max_cost
             .values()
-            // Use unwrap_or to handle NaN costs gracefully instead of panicking.
-            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
             .copied()
             .unwrap_or(0.0)
     }

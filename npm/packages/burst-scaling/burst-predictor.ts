@@ -235,7 +235,7 @@ export class BurstPredictor {
   /**
    * Predict load distribution across regions
    */
-  private predictRegionalLoad(
+  private async predictRegionalLoad(
     event: CalendarEvent,
     multiplier: number
   ): Promise<RegionalPrediction[]> {
@@ -264,7 +264,7 @@ export class BurstPredictor {
       });
     }
 
-    return Promise.resolve(predictions);
+    return predictions;
   }
 
   /**
@@ -356,17 +356,17 @@ export class BurstPredictor {
   /**
    * Get current prediction accuracy metrics
    */
-  getPredictionAccuracy(): Promise<{
+  async getPredictionAccuracy(): Promise<{
     accuracy: number;
     mape: number; // Mean Absolute Percentage Error
     predictions: number;
   }> {
     // In production, calculate from actual vs predicted metrics
-    return Promise.resolve({
+    return {
       accuracy: 0.87, // 87% accuracy
       mape: 0.13, // 13% average error
       predictions: this.upcomingEvents.length
-    });
+    };
   }
 }
 
@@ -396,8 +396,8 @@ if (require.main === module) {
     ]
   };
 
-  void predictor.loadEventCalendar(calendar).then(() => {
-    void predictor.predictUpcomingBursts(48).then(bursts => {
+  predictor.loadEventCalendar(calendar).then(() => {
+    predictor.predictUpcomingBursts(48).then(bursts => {
       console.log('Predicted Bursts:');
       bursts.forEach(burst => {
         console.log(`\n${burst.eventName}:`);
