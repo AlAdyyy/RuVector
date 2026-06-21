@@ -118,9 +118,9 @@
     }
   },
   "cli_download_commands": {
-    "Q4_K_M": "huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct-GGUF qwen2.5-0.5b-instruct-q4_k_m.gguf --local-dir . --local-dir-use-symlinks False",
-    "Q5_K_M": "huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct-GGUF qwen2.5-0.5b-instruct-q5_k_m.gguf --local-dir . --local-dir-use-symlinks False",
-    "Q8_0": "huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct-GGUF qwen2.5-0.5b-instruct-q8_0.gguf --local-dir . --local-dir-use-symlinks False"
+    "Q4_K_M": "hf download Qwen/Qwen2.5-0.5B-Instruct-GGUF qwen2.5-0.5b-instruct-q4_k_m.gguf --local-dir .",
+    "Q5_K_M": "hf download Qwen/Qwen2.5-0.5B-Instruct-GGUF qwen2.5-0.5b-instruct-q5_k_m.gguf --local-dir .",
+    "Q8_0": "hf download Qwen/Qwen2.5-0.5B-Instruct-GGUF qwen2.5-0.5b-instruct-q8_0.gguf --local-dir ."
   },
   "performance_targets": {
     "inference_latency_ms": {

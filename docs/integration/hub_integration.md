@@ -237,7 +237,7 @@ println!("CUDA: {}", model.hardware.supports_cuda);
 The hub integration requires:
 
 - `curl` or `wget` for downloads (uses system tools for efficiency)
-- `huggingface-cli` for uploads (install with `pip install huggingface_hub[cli]`)
+- `hf` CLI for uploads (install with `curl -LsSf https://hf.co/cli/install.sh | bash`)
 - SHA256 for checksum verification (built-in via `sha2` crate)
 
 ## Features

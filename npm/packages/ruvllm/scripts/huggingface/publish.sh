@@ -2,8 +2,8 @@
 # RuvLTRA HuggingFace Publishing Script
 #
 # Prerequisites:
-#   pip install huggingface_hub
-#   huggingface-cli login
+#   curl -LsSf https://hf.co/cli/install.sh | bash
+#   hf auth login
 #
 # Environment:
 #   HF_TOKEN or HUGGING_FACE_HUB_TOKEN must be set
@@ -35,13 +35,15 @@ fi
 
 echo -e "${GREEN}✓ HuggingFace token found${NC}"
 
-# Check for huggingface-cli
-if ! command -v huggingface-cli &> /dev/null; then
-    echo -e "${YELLOW}Installing huggingface_hub...${NC}"
-    pip install huggingface_hub
+# Check for hf CLI
+if ! command -v hf &> /dev/null; then
+    echo -e "${YELLOW}Installing hf CLI...${NC}"
+    curl -LsSf https://hf.co/cli/install.sh | bash
+    # Ensure ~/.local/bin is in PATH for this session
+    export PATH="${HOME}/.local/bin:${PATH}"
 fi
 
-echo -e "${GREEN}✓ huggingface-cli available${NC}"
+echo -e "${GREEN}✓ hf CLI available${NC}"
 
 # List available models
 echo ""
@@ -62,7 +64,7 @@ echo "────────────────────────�
 
 if [ -f "${SCRIPT_DIR}/README.md" ]; then
     echo "Uploading model card..."
-    huggingface-cli upload "${REPO_ID}" "${SCRIPT_DIR}/README.md" README.md \
+    hf upload "${REPO_ID}" "${SCRIPT_DIR}/README.md" README.md \
         --token "${HF_TOKEN}" \
         --commit-message "Update model card with 100% routing accuracy benchmarks"
     echo -e "${GREEN}✓ README.md uploaded${NC}"
@@ -87,7 +89,7 @@ for model_entry in "${MODELS[@]}"; do
         echo "  Description: ${model_desc}"
         echo "  Size: $(du -h "${model_path}" | cut -f1)"
 
-        huggingface-cli upload "${REPO_ID}" "${model_path}" "${model_file}" \
+        hf upload "${REPO_ID}" "${model_path}" "${model_file}" \
             --token "${HF_TOKEN}" \
             --commit-message "Update ${model_file} - ${model_desc}"
 

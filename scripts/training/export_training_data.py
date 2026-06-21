@@ -205,7 +205,7 @@ def routing_dataset_reference() -> list[dict]:
 
     The actual dataset (ruvnet/claude-flow-routing, 2700+ examples) is not
     downloaded here -- it should be fetched via `datasets` library or
-    `huggingface-cli` during the actual training pipeline. This record serves
+    `hf` CLI during the actual training pipeline. This record serves
     as a corpus manifest entry so the dataset is tracked in provenance.
     """
     ref_text = (
