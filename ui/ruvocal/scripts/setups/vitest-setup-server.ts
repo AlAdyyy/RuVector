@@ -5,13 +5,21 @@ import fs from "fs";
 
 // Load the .env file
 const envPath = resolve(__dirname, "../../.env");
-dotenv.config({ path: envPath });
+const envLocalPath = resolve(__dirname, "../../.env.local");
 
-// Read the .env file content
-const envContent = fs.readFileSync(envPath, "utf-8");
+let envVars = {};
 
-// Parse the .env content
-const envVars = dotenv.parse(envContent);
+if (fs.existsSync(envPath)) {
+	dotenv.config({ path: envPath });
+	const envContent = fs.readFileSync(envPath, "utf-8");
+	envVars = { ...envVars, ...dotenv.parse(envContent) };
+}
+
+if (fs.existsSync(envLocalPath)) {
+	dotenv.config({ path: envLocalPath });
+	const envContent = fs.readFileSync(envLocalPath, "utf-8");
+	envVars = { ...envVars, ...dotenv.parse(envContent) };
+}
 
 // Separate public and private variables
 const publicEnv = {};
