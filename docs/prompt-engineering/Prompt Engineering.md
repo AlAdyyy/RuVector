@@ -5,7 +5,7 @@ This directory serves as the central hub for all AI prompt engineering documenta
 ## 📂 Directory Structure
 
 - `docs/prompt-engineering/`: Core research, guides, and centralized documents.
-- `docs/mega-prompts/`: Large system prompts and comprehensive prompt templates.
+- `docs/prompt-engineering/mega-prompts/`: Large system prompts and comprehensive prompt templates.
 - `docs/prompt-engineering/google-drive/`: Destination for documents synced from Google Drive.
 
 ## 📝 Key Documents
@@ -26,10 +26,10 @@ This directory serves as the central hub for all AI prompt engineering documenta
 
 ## 🚀 Mega Prompts
 
-Located in `docs/mega-prompts/`:
-- [rvAgent Base Prompt](../mega-prompts/RVAGENT_BASE_PROMPT.md): The core system prompt for the coding assistant.
-- [Subagent Orchestration](../mega-prompts/SUBAGENT_ORCHESTRATION_PROMPTS.md): Prompts for task spawning and handoffs.
-- [Skill Builder](../mega-prompts/SKILL_BUILDER_SYSTEM_PROMPT.md): Instructions for building Claude Code Skills.
+Located in `docs/prompt-engineering/mega-prompts/`:
+- [rvAgent Base Prompt](mega-prompts/RVAGENT_BASE_PROMPT.md): The core system prompt for the coding assistant.
+- [Subagent Orchestration](mega-prompts/SUBAGENT_ORCHESTRATION_PROMPTS.md): Prompts for task spawning and handoffs.
+- [Skill Builder](mega-prompts/SKILL_BUILDER_SYSTEM_PROMPT.md): Instructions for building Claude Code Skills.
 
 ## 🔄 Synchronization
 
