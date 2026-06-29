@@ -11,6 +11,7 @@
 //! configured network group. Configuration changes still need external
 //! serialisation; we provide that via `Mutex` higher up in `lib.rs`.
 
+
 use crate::error::HailoError;
 #[cfg(feature = "hailo")]
 use std::ptr;
