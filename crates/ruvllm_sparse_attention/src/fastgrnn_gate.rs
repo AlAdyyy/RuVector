@@ -69,7 +69,7 @@ impl FastGrnnGate {
         Self {
             input_dim,
             hidden_dim,
-            w_gate: (0..n_in_h).map(|i| seed_w(i)).collect(),
+            w_gate: (0..n_in_h).map(seed_w).collect(),
             u_gate: (0..n_h_h).map(|i| seed_w(i + 1000)).collect(),
             w_update: (0..n_in_h).map(|i| seed_w(i + 2000)).collect(),
             u_update: (0..n_h_h).map(|i| seed_w(i + 3000)).collect(),
@@ -189,7 +189,7 @@ impl FastGrnnGate {
             return Vec::new();
         }
         let q = quantile.clamp(0.0, 1.0);
-        let mut sorted: Vec<f32> = salience.iter().copied().collect();
+        let mut sorted: Vec<f32> = salience.to_vec();
         // partial_cmp can return None for NaN — sort treating NaN as smallest.
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
         let idx = ((n as f32) * q) as usize;
@@ -247,13 +247,13 @@ impl FastGrnnGate {
 #[inline]
 fn matmul_add(weights: &[f32], input: &[f32], result: &mut [f32], cols: usize) {
     let rows = result.len();
-    for i in 0..rows {
+    for (i, res_item) in result.iter_mut().enumerate().take(rows) {
         let row_off = i * cols;
-        let mut s = result[i];
-        for j in 0..cols {
-            s += weights[row_off + j] * input[j];
+        let mut s = *res_item;
+        for (j, input_item) in input.iter().enumerate().take(cols) {
+            s += weights[row_off + j] * input_item;
         }
-        result[i] = s;
+        *res_item = s;
     }
 }
 

@@ -198,8 +198,8 @@ impl AttentionBackend for SubquadraticSparseAttention {
                             let score = dot(q_row, k.row(j, h)) * scale;
                             if score > running_max {
                                 let c = (running_max - score).exp();
-                                for d in 0..dim {
-                                    acc[d] *= c;
+                                for item in acc.iter_mut().take(dim) {
+                                    *item *= c;
                                 }
                                 denom *= c;
                                 running_max = score;
@@ -207,8 +207,8 @@ impl AttentionBackend for SubquadraticSparseAttention {
                             let w = (score - running_max).exp();
                             denom += w;
                             let vr = v.row(j, h);
-                            for d in 0..dim {
-                                acc[d] += w * vr[d];
+                            for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                                *item += w * vr[d];
                             }
                         }
                         if let Some(lm) = lm_ref {
@@ -216,8 +216,8 @@ impl AttentionBackend for SubquadraticSparseAttention {
                                 let score = dot(q_row, lm.keys.row(b, h)) * scale;
                                 if score > running_max {
                                     let c = (running_max - score).exp();
-                                    for d in 0..dim {
-                                        acc[d] *= c;
+                                    for item in acc.iter_mut().take(dim) {
+                                        *item *= c;
                                     }
                                     denom *= c;
                                     running_max = score;
@@ -225,15 +225,15 @@ impl AttentionBackend for SubquadraticSparseAttention {
                                 let w = (score - running_max).exp();
                                 denom += w;
                                 let vr = lm.values.row(b, h);
-                                for d in 0..dim {
-                                    acc[d] += w * vr[d];
+                                for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                                    *item += w * vr[d];
                                 }
                             }
                         }
                         let inv = if denom > 0.0 { 1.0 / denom } else { 0.0 };
                         let s = &mut hout[i * dim..(i + 1) * dim];
-                        for d in 0..dim {
-                            s[d] = acc[d] * inv;
+                        for (d, item) in s.iter_mut().enumerate().take(dim) {
+                            *item = acc[d] * inv;
                         }
                     }
                     hout
@@ -294,8 +294,8 @@ impl AttentionBackend for SubquadraticSparseAttention {
                         let score = dot(q_row, k.row(j, h)) * scale;
                         if score > running_max {
                             let corr = (running_max - score).exp();
-                            for d in 0..dim {
-                                acc[d] *= corr;
+                            for item in acc.iter_mut().take(dim) {
+                                *item *= corr;
                             }
                             denom *= corr;
                             running_max = score;
@@ -303,8 +303,8 @@ impl AttentionBackend for SubquadraticSparseAttention {
                         let w = (score - running_max).exp();
                         denom += w;
                         let v_row = v.row(j, h);
-                        for d in 0..dim {
-                            acc[d] += w * v_row[d];
+                        for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                            *item += w * v_row[d];
                         }
                     }
                     if let Some(lm) = landmarks.as_ref() {
@@ -312,8 +312,8 @@ impl AttentionBackend for SubquadraticSparseAttention {
                             let score = dot(q_row, lm.keys.row(b, h)) * scale;
                             if score > running_max {
                                 let corr = (running_max - score).exp();
-                                for d in 0..dim {
-                                    acc[d] *= corr;
+                                for item in acc.iter_mut().take(dim) {
+                                    *item *= corr;
                                 }
                                 denom *= corr;
                                 running_max = score;
@@ -321,15 +321,15 @@ impl AttentionBackend for SubquadraticSparseAttention {
                             let w = (score - running_max).exp();
                             denom += w;
                             let v_row = lm.values.row(b, h);
-                            for d in 0..dim {
-                                acc[d] += w * v_row[d];
+                            for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                                *item += w * v_row[d];
                             }
                         }
                     }
                     let out_row = out.row_mut(i, h);
                     let inv_denom = if denom > 0.0 { 1.0 / denom } else { 0.0 };
-                    for d in 0..dim {
-                        out_row[d] = acc[d] * inv_denom;
+                    for (d, item) in out_row.iter_mut().enumerate().take(dim) {
+                        *item = acc[d] * inv_denom;
                     }
                 }
             }
@@ -456,8 +456,8 @@ impl SubquadraticSparseAttention {
                     let score = dot(q_row, k.row(j, h)) * scale;
                     if score > running_max {
                         let corr = (running_max - score).exp();
-                        for d in 0..dim {
-                            acc[d] *= corr;
+                        for item in acc.iter_mut().take(dim) {
+                            *item *= corr;
                         }
                         denom *= corr;
                         running_max = score;
@@ -465,8 +465,8 @@ impl SubquadraticSparseAttention {
                     let w = (score - running_max).exp();
                     denom += w;
                     let v_row = v.row(j, h);
-                    for d in 0..dim {
-                        acc[d] += w * v_row[d];
+                    for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                        *item += w * v_row[d];
                     }
                 }
                 if let Some(lm) = landmarks.as_ref() {
@@ -474,8 +474,8 @@ impl SubquadraticSparseAttention {
                         let score = dot(q_row, lm.keys.row(b, h)) * scale;
                         if score > running_max {
                             let corr = (running_max - score).exp();
-                            for d in 0..dim {
-                                acc[d] *= corr;
+                            for item in acc.iter_mut().take(dim) {
+                                *item *= corr;
                             }
                             denom *= corr;
                             running_max = score;
@@ -483,15 +483,15 @@ impl SubquadraticSparseAttention {
                         let w = (score - running_max).exp();
                         denom += w;
                         let v_row = lm.values.row(b, h);
-                        for d in 0..dim {
-                            acc[d] += w * v_row[d];
+                        for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                            *item += w * v_row[d];
                         }
                     }
                 }
                 let out_row = out.row_mut(i, h);
                 let inv_denom = if denom > 0.0 { 1.0 / denom } else { 0.0 };
-                for d in 0..dim {
-                    out_row[d] = acc[d] * inv_denom;
+                for (d, item) in out_row.iter_mut().enumerate().take(dim) {
+                    *item = acc[d] * inv_denom;
                 }
             }
         }
@@ -556,15 +556,15 @@ pub fn dense_attention(
                 let weight = (score - max_score).exp();
                 denom += weight;
                 let v_row = v.row(j, h);
-                for d in 0..dim {
-                    acc[d] += weight * v_row[d];
+                for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                    *item += weight * v_row[d];
                 }
             }
 
             let out_row = out.row_mut(i, h);
             let inv_denom = if denom > 0.0 { 1.0 / denom } else { 0.0 };
-            for d in 0..dim {
-                out_row[d] = acc[d] * inv_denom;
+            for (d, item) in out_row.iter_mut().enumerate().take(dim) {
+                *item = acc[d] * inv_denom;
             }
         }
     }
@@ -1142,8 +1142,8 @@ impl SubquadraticSparseAttention {
                 let score = dot(q_row, cache.keys.row(j, kv_h)) * scale;
                 if score > running_max {
                     let corr = (running_max - score).exp();
-                    for d in 0..dim {
-                        acc[d] *= corr;
+                    for item in acc.iter_mut().take(dim) {
+                        *item *= corr;
                     }
                     denom *= corr;
                     running_max = score;
@@ -1151,8 +1151,8 @@ impl SubquadraticSparseAttention {
                 let w = (score - running_max).exp();
                 denom += w;
                 let v_row = cache.values.row(j, kv_h);
-                for d in 0..dim {
-                    acc[d] += w * v_row[d];
+                for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                    *item += w * v_row[d];
                 }
             }
 
@@ -1161,8 +1161,8 @@ impl SubquadraticSparseAttention {
                 let score = dot(q_row, cache.landmarks.keys.row(b, kv_h)) * scale;
                 if score > running_max {
                     let corr = (running_max - score).exp();
-                    for d in 0..dim {
-                        acc[d] *= corr;
+                    for item in acc.iter_mut().take(dim) {
+                        *item *= corr;
                     }
                     denom *= corr;
                     running_max = score;
@@ -1170,15 +1170,15 @@ impl SubquadraticSparseAttention {
                 let w = (score - running_max).exp();
                 denom += w;
                 let v_row = cache.landmarks.values.row(b, kv_h);
-                for d in 0..dim {
-                    acc[d] += w * v_row[d];
+                for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                    *item += w * v_row[d];
                 }
             }
 
             let out_row = out.row_mut(0, h);
             let inv = if denom > 0.0 { 1.0 / denom } else { 0.0 };
-            for d in 0..dim {
-                out_row[d] = acc[d] * inv;
+            for (d, item) in out_row.iter_mut().enumerate().take(dim) {
+                *item = acc[d] * inv;
             }
         }
 
@@ -1370,8 +1370,8 @@ impl SubquadraticSparseAttention {
                             let score = dot(q_row, k.row(j, kv_h)) * scale;
                             if score > running_max {
                                 let c = (running_max - score).exp();
-                                for d in 0..dim {
-                                    acc[d] *= c;
+                                for item in acc.iter_mut().take(dim) {
+                                    *item *= c;
                                 }
                                 denom *= c;
                                 running_max = score;
@@ -1379,8 +1379,8 @@ impl SubquadraticSparseAttention {
                             let w = (score - running_max).exp();
                             denom += w;
                             let vr = v.row(j, kv_h);
-                            for d in 0..dim {
-                                acc[d] += w * vr[d];
+                            for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                                *item += w * vr[d];
                             }
                         }
                         if let Some(lm) = lm_ref {
@@ -1388,8 +1388,8 @@ impl SubquadraticSparseAttention {
                                 let score = dot(q_row, lm.keys.row(b, kv_h)) * scale;
                                 if score > running_max {
                                     let c = (running_max - score).exp();
-                                    for d in 0..dim {
-                                        acc[d] *= c;
+                                    for item in acc.iter_mut().take(dim) {
+                                        *item *= c;
                                     }
                                     denom *= c;
                                     running_max = score;
@@ -1397,15 +1397,15 @@ impl SubquadraticSparseAttention {
                                 let w = (score - running_max).exp();
                                 denom += w;
                                 let vr = lm.values.row(b, kv_h);
-                                for d in 0..dim {
-                                    acc[d] += w * vr[d];
+                                for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                                    *item += w * vr[d];
                                 }
                             }
                         }
                         let inv = if denom > 0.0 { 1.0 / denom } else { 0.0 };
                         let s = &mut hout[i * dim..(i + 1) * dim];
-                        for d in 0..dim {
-                            s[d] = acc[d] * inv;
+                        for (d, item) in s.iter_mut().enumerate().take(dim) {
+                            *item = acc[d] * inv;
                         }
                     }
                     hout
@@ -1466,8 +1466,8 @@ impl SubquadraticSparseAttention {
                         let score = dot(q_row, k.row(j, kv_h)) * scale;
                         if score > running_max {
                             let corr = (running_max - score).exp();
-                            for d in 0..dim {
-                                acc[d] *= corr;
+                            for item in acc.iter_mut().take(dim) {
+                                *item *= corr;
                             }
                             denom *= corr;
                             running_max = score;
@@ -1475,8 +1475,8 @@ impl SubquadraticSparseAttention {
                         let w = (score - running_max).exp();
                         denom += w;
                         let v_row = v.row(j, kv_h);
-                        for d in 0..dim {
-                            acc[d] += w * v_row[d];
+                        for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                            *item += w * v_row[d];
                         }
                     }
                     if let Some(lm) = landmarks.as_ref() {
@@ -1484,8 +1484,8 @@ impl SubquadraticSparseAttention {
                             let score = dot(q_row, lm.keys.row(b, kv_h)) * scale;
                             if score > running_max {
                                 let corr = (running_max - score).exp();
-                                for d in 0..dim {
-                                    acc[d] *= corr;
+                                for item in acc.iter_mut().take(dim) {
+                                    *item *= corr;
                                 }
                                 denom *= corr;
                                 running_max = score;
@@ -1493,15 +1493,15 @@ impl SubquadraticSparseAttention {
                             let w = (score - running_max).exp();
                             denom += w;
                             let v_row = lm.values.row(b, kv_h);
-                            for d in 0..dim {
-                                acc[d] += w * v_row[d];
+                            for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                                *item += w * v_row[d];
                             }
                         }
                     }
                     let out_row = out.row_mut(i, h);
                     let inv = if denom > 0.0 { 1.0 / denom } else { 0.0 };
-                    for d in 0..dim {
-                        out_row[d] = acc[d] * inv;
+                    for (d, item) in out_row.iter_mut().enumerate().take(dim) {
+                        *item = acc[d] * inv;
                     }
                 }
             }
@@ -1576,21 +1576,13 @@ impl SubquadraticSparseAttention {
             } else {
                 kv_start.saturating_sub(window)
             };
-            let q_hi = if causal {
-                (kv_end - 1 + window + 1).min(seq) // exclusive upper bound on q
-            } else {
-                (kv_end - 1 + window + 1).min(seq)
-            };
+            let q_hi = (kv_end - 1 + window + 1).min(seq); // exclusive upper bound on q
 
             for h in 0..q_heads {
                 let kv_h = h / group_size;
                 for qi in q_lo..q_hi {
                     // Window intersection of query qi with this tile:
-                    let win_lo = if causal {
-                        qi.saturating_sub(window).max(kv_start)
-                    } else {
-                        qi.saturating_sub(window).max(kv_start)
-                    };
+                    let win_lo = qi.saturating_sub(window).max(kv_start);
                     let win_hi = if causal {
                         qi.min(kv_end.saturating_sub(1))
                     } else {
@@ -1607,8 +1599,8 @@ impl SubquadraticSparseAttention {
                         let score = dot(q_row, k.row(j, kv_h)) * scale;
                         if score > running_max[slot] {
                             let corr = (running_max[slot] - score).exp();
-                            for d in 0..dim {
-                                out_data[out_base + d] *= corr;
+                            for item in out_data[out_base..out_base + dim].iter_mut() {
+                                *item *= corr;
                             }
                             denom[slot] *= corr;
                             running_max[slot] = score;
@@ -1616,8 +1608,8 @@ impl SubquadraticSparseAttention {
                         let w = (score - running_max[slot]).exp();
                         denom[slot] += w;
                         let v_row = v.row(j, kv_h);
-                        for d in 0..dim {
-                            out_data[out_base + d] += w * v_row[d];
+                        for (d, item) in out_data[out_base..out_base + dim].iter_mut().enumerate() {
+                            *item += w * v_row[d];
                         }
                     }
                 }
@@ -1656,10 +1648,7 @@ impl SubquadraticSparseAttention {
                     } else {
                         (qi + window).min(seq - 1)
                     };
-                    let mark_stamp = stamp_base; // same stamp
-                    for j in win_lo..=win_hi {
-                        seen_tokens[j] = mark_stamp;
-                    }
+                    seen_tokens[win_lo..=win_hi].fill(stamp_base);
                 }
 
                 sparse_toks.clear();
@@ -1713,8 +1702,8 @@ impl SubquadraticSparseAttention {
                         let score = dot(q.row(qi, h), lm.keys.row(b, kv_h)) * scale;
                         if score > running_max[slot] {
                             let corr = (running_max[slot] - score).exp();
-                            for d in 0..dim {
-                                out_data[out_base + d] *= corr;
+                            for item in out_data[out_base..out_base + dim].iter_mut() {
+                                *item *= corr;
                             }
                             denom[slot] *= corr;
                             running_max[slot] = score;
@@ -1722,8 +1711,8 @@ impl SubquadraticSparseAttention {
                         let w = (score - running_max[slot]).exp();
                         denom[slot] += w;
                         let v_row = lm.values.row(b, kv_h);
-                        for d in 0..dim {
-                            out_data[out_base + d] += w * v_row[d];
+                        for (d, item) in out_data[out_base..out_base + dim].iter_mut().enumerate() {
+                            *item += w * v_row[d];
                         }
                     }
                 }
@@ -1736,8 +1725,8 @@ impl SubquadraticSparseAttention {
                         let score = dot(q.row(qi, h), k.row(j, kv_h)) * scale;
                         if score > running_max[slot] {
                             let corr = (running_max[slot] - score).exp();
-                            for d in 0..dim {
-                                out_data[out_base + d] *= corr;
+                            for item in out_data[out_base..out_base + dim].iter_mut() {
+                                *item *= corr;
                             }
                             denom[slot] *= corr;
                             running_max[slot] = score;
@@ -1745,8 +1734,8 @@ impl SubquadraticSparseAttention {
                         let w = (score - running_max[slot]).exp();
                         denom[slot] += w;
                         let v_row = v.row(j, kv_h);
-                        for d in 0..dim {
-                            out_data[out_base + d] += w * v_row[d];
+                        for (d, item) in out_data[out_base..out_base + dim].iter_mut().enumerate() {
+                            *item += w * v_row[d];
                         }
                     }
                 }
@@ -1765,8 +1754,8 @@ impl SubquadraticSparseAttention {
                 };
                 let out_row = out.row_mut(qi, h);
                 let src_base = slot * dim;
-                for d in 0..dim {
-                    out_row[d] = out_data[src_base + d] * inv;
+                for (d, item) in out_row.iter_mut().enumerate().take(dim) {
+                    *item = out_data[src_base + d] * inv;
                 }
             }
         }
@@ -1974,14 +1963,14 @@ impl KvCacheF16 {
 
             for &j in &token_candidates {
                 let base = (j * self.kv_heads + kv_h) * dim;
-                for d in 0..dim {
-                    k_buf[d] = self.keys[base + d].to_f32();
+                for (d, item) in k_buf.iter_mut().enumerate().take(dim) {
+                    *item = self.keys[base + d].to_f32();
                 }
                 let score = dot(q_row, &k_buf) * scale;
                 if score > running_max {
                     let corr = (running_max - score).exp();
-                    for d in 0..dim {
-                        acc[d] *= corr;
+                    for item in acc.iter_mut().take(dim) {
+                        *item *= corr;
                     }
                     denom_acc *= corr;
                     running_max = score;
@@ -1989,8 +1978,8 @@ impl KvCacheF16 {
                 let w = (score - running_max).exp();
                 denom_acc += w;
                 let v_base = (j * self.kv_heads + kv_h) * dim;
-                for d in 0..dim {
-                    acc[d] += w * self.values[v_base + d].to_f32();
+                for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                    *item += w * self.values[v_base + d].to_f32();
                 }
             }
 
@@ -1999,8 +1988,8 @@ impl KvCacheF16 {
                 let score = dot(q_row, self.landmarks.keys.row(b, kv_h)) * scale;
                 if score > running_max {
                     let corr = (running_max - score).exp();
-                    for d in 0..dim {
-                        acc[d] *= corr;
+                    for item in acc.iter_mut().take(dim) {
+                        *item *= corr;
                     }
                     denom_acc *= corr;
                     running_max = score;
@@ -2008,8 +1997,8 @@ impl KvCacheF16 {
                 let w = (score - running_max).exp();
                 denom_acc += w;
                 let v_row = self.landmarks.values.row(b, kv_h);
-                for d in 0..dim {
-                    acc[d] += w * v_row[d];
+                for (d, item) in acc.iter_mut().enumerate().take(dim) {
+                    *item += w * v_row[d];
                 }
             }
 
@@ -2019,8 +2008,8 @@ impl KvCacheF16 {
                 0.0
             };
             let out_row = out.row_mut(0, h);
-            for d in 0..dim {
-                out_row[d] = acc[d] * inv;
+            for (d, item) in out_row.iter_mut().enumerate().take(dim) {
+                *item = acc[d] * inv;
             }
         }
 

@@ -179,16 +179,16 @@ fn make_embedding_matrix(vocab_size: usize, head_dim: usize, seed: u32) -> Vec<f
 }
 
 #[inline]
-fn token_embedding<'a>(t: u8, w: &'a [f32], head_dim: usize) -> &'a [f32] {
+fn token_embedding(t: u8, w: &[f32], head_dim: usize) -> &[f32] {
     let i = (t as usize) * head_dim;
     &w[i..i + head_dim]
 }
 
 fn pos_encoding_into(i: usize, dim: usize, out: &mut [f32]) {
-    for d in 0..dim {
+    for (d, item) in out.iter_mut().enumerate().take(dim) {
         let half = d / 2;
         let theta = (i as f32) / 10000_f32.powf((2 * half) as f32 / dim as f32);
-        out[d] = if d % 2 == 0 { theta.sin() } else { theta.cos() };
+        *item = if d % 2 == 0 { theta.sin() } else { theta.cos() };
     }
 }
 
@@ -292,8 +292,8 @@ pub fn sample_logits(
     }
     let r = next_uniform(state);
     let mut acc = 0.0f32;
-    for i in 0..v {
-        acc += probs[i];
+    for (i, item) in probs.iter().enumerate().take(v) {
+        acc += item;
         if r < acc {
             return i as u8;
         }
@@ -370,13 +370,13 @@ impl Retriever {
         let last = combined.len() - 1;
         let d = self.cfg.head_dim;
         let mut logits = vec![0.0f32; self.cfg.vocab_size];
-        for v_idx in 0..self.cfg.vocab_size {
+        for (v_idx, item) in logits.iter_mut().enumerate().take(self.cfg.vocab_size) {
             let emb = token_embedding(v_idx as u8, &self.w, d);
             let mut dot = 0.0f32;
-            for di in 0..d {
-                dot += out.get(last, 0, di) * emb[di];
+            for (di, emb_item) in emb.iter().enumerate().take(d) {
+                dot += out.get(last, 0, di) * emb_item;
             }
-            logits[v_idx] = dot;
+            *item = dot;
         }
         logits
     }
@@ -427,13 +427,13 @@ impl Retriever {
             let out = attn.decode_step(&q, &cache).expect("decode");
 
             let mut logits = vec![0.0f32; self.cfg.vocab_size];
-            for v_idx in 0..self.cfg.vocab_size {
+            for (v_idx, item) in logits.iter_mut().enumerate().take(self.cfg.vocab_size) {
                 let emb = token_embedding(v_idx as u8, &self.w, d);
                 let mut dot = 0.0f32;
-                for di in 0..d {
-                    dot += out.get(0, 0, di) * emb[di];
+                for (di, emb_item) in emb.iter().enumerate().take(d) {
+                    dot += out.get(0, 0, di) * emb_item;
                 }
-                logits[v_idx] = dot;
+                *item = dot;
             }
 
             let win = sampling.no_repeat_window.min(sequence.len());
@@ -478,8 +478,8 @@ impl<'a> Diffuser<'a> {
 
         for i in 0..n {
             let krow = k.row_mut(i, 0);
-            for slot in 0..weights.len() {
-                let weight = weights[slot];
+            for (slot, weight_item) in weights.iter().enumerate() {
+                let weight = *weight_item;
                 let off = slot + 1;
                 if i >= off && seq[i - off] != mask {
                     let emb = token_embedding(seq[i - off], &self.retriever.w, d);
@@ -521,13 +521,13 @@ impl<'a> Diffuser<'a> {
         for i in 0..working.len() {
             let idx = prefix_start + i;
             let mut logits = vec![0.0f32; vsize];
-            for v_idx in 0..vsize {
+            for (v_idx, item) in logits.iter_mut().enumerate().take(vsize) {
                 let emb = token_embedding(v_idx as u8, &self.retriever.w, d);
                 let mut dot = 0.0f32;
-                for di in 0..d {
-                    dot += out.get(idx, 0, di) * emb[di];
+                for (di, emb_item) in emb.iter().enumerate().take(d) {
+                    dot += out.get(idx, 0, di) * emb_item;
                 }
-                logits[v_idx] = dot;
+                *item = dot;
             }
             all.push(logits);
         }
@@ -575,14 +575,14 @@ impl<'a> Diffuser<'a> {
             .collect();
         ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(core::cmp::Ordering::Equal));
         let n = keep_count.min(ranked.len());
-        for ki in 0..n {
-            let (j, _) = ranked[ki];
-            let mut row = logits[j].clone();
+        for item in ranked.iter().take(n) {
+            let (j, _) = item;
+            let mut row = logits[*j].clone();
             let mut next = sample_logits(&mut row, sampling, &[], state);
             if (next as usize) >= self.retriever.cfg.vocab_size {
                 next = 0;
             }
-            working[j] = next;
+            working[*j] = next;
         }
     }
 
@@ -605,15 +605,13 @@ impl<'a> Diffuser<'a> {
         if boot_len > 0 && corpus_len > boot_len {
             let corpus_off = (xorshift32(&mut state) as usize) % (corpus_len - boot_len);
             let work_off = (xorshift32(&mut state) as usize) % (n - boot_len);
-            working[work_off..work_off + boot_len].copy_from_slice(
-                &self.retriever.corpus[corpus_off..corpus_off + boot_len],
-            );
+            working[work_off..work_off + boot_len]
+                .copy_from_slice(&self.retriever.corpus[corpus_off..corpus_off + boot_len]);
         }
 
         for t in 0..n_steps {
             let frac = ((t + 1) as f32) / (n_steps as f32);
-            let target_masked =
-                (n as f32 * (core::f32::consts::FRAC_PI_2 * frac).cos()) as usize;
+            let target_masked = (n as f32 * (core::f32::consts::FRAC_PI_2 * frac).cos()) as usize;
             let current_masked = working.iter().filter(|&&x| x == mask).count();
             let to_unmask = current_masked.saturating_sub(target_masked).max(1);
             self.denoise_step(&mut working, to_unmask, sampling, &mut state);

@@ -1,3 +1,4 @@
+import { building } from "$app/environment";
 import { config } from "$lib/server/config";
 import type { ChatTemplateInput } from "$lib/types/Template";
 import { z } from "zod";
@@ -181,8 +182,8 @@ export type ModelsRefreshSummary = {
 export type ProcessedModel = InternalProcessedModel;
 
 export let models: ProcessedModel[] = [];
-export let defaultModel!: ProcessedModel;
-export let taskModel!: ProcessedModel;
+export let defaultModel: ProcessedModel = { id: "default" } as ProcessedModel;
+export let taskModel: ProcessedModel = { id: "default" } as ProcessedModel;
 export let validModelIdSchema: z.ZodType<string> = z.string();
 export let lastModelRefresh = new Date(0);
 export let lastModelRefreshDurationMs = 0;
@@ -491,11 +492,26 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 
 const rebuildModels = async (): Promise<ModelsRefreshSummary> => {
 	const startedAt = Date.now();
+	// Skip building models during the actual build process to avoid missing env var errors
+	const isBuilding = building || process.env.NODE_ENV === "production";
+	if (isBuilding) {
+		return {
+			refreshedAt: new Date(),
+			durationMs: 0,
+			added: [],
+			removed: [],
+			changed: [],
+			total: 0,
+		};
+	}
 	const newModels = await buildModels();
 	return applyModelState(newModels, startedAt);
 };
 
-await rebuildModels();
+const isBuilding = building || process.env.NODE_ENV === "production";
+if (!isBuilding) {
+	await rebuildModels();
+}
 
 export const refreshModels = async (): Promise<ModelsRefreshSummary> => {
 	if (inflightRefresh) {
