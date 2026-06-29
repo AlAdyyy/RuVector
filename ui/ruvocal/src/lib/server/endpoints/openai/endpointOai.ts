@@ -22,8 +22,8 @@ export const endpointOAIParametersSchema = z.object({
 	model: z.any(),
 	type: z.literal("openai"),
 	baseURL: z.string().url().default("https://api.openai.com/v1"),
-	// Canonical auth token is OPENAI_API_KEY; keep HF_TOKEN as legacy alias
-	apiKey: z.string().default(config.OPENAI_API_KEY || config.HF_TOKEN || "sk-"),
+	// Canonical auth token is OPENAI_API_KEY; keep HF_TOKEN and OPENROUTER_API_KEY as aliases
+	apiKey: z.string().default(config.OPENAI_API_KEY || config.OPENROUTER_API_KEY || config.HF_TOKEN || "sk-"),
 	completion: z
 		.union([z.literal("completions"), z.literal("chat_completions")])
 		.default("chat_completions"),

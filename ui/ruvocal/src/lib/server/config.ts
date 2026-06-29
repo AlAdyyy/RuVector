@@ -153,6 +153,7 @@ export const ready = (async () => {
 
 type ExtraConfigKeys =
 	| "HF_TOKEN"
+	| "OPENROUTER_API_KEY"
 	| "OLD_MODELS"
 	| "ENABLE_ASSISTANTS"
 	| "METRICS_ENABLED"
