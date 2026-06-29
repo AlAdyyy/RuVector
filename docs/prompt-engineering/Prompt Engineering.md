@@ -27,6 +27,7 @@ This directory serves as the central hub for all AI prompt engineering documenta
 ## 🚀 Mega Prompts
 
 Located in `docs/prompt-engineering/mega-prompts/`:
+- [Master Job Matcher](mega-prompts/MASTER_JOB_MATCHER_PROMPT.md): 97% match target & automatic resume/CL tailoring engine.
 - [rvAgent Base Prompt](mega-prompts/RVAGENT_BASE_PROMPT.md): The core system prompt for the coding assistant.
 - [Subagent Orchestration](mega-prompts/SUBAGENT_ORCHESTRATION_PROMPTS.md): Prompts for task spawning and handoffs.
 - [Skill Builder](mega-prompts/SKILL_BUILDER_SYSTEM_PROMPT.md): Instructions for building Claude Code Skills.
